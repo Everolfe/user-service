@@ -28,7 +28,9 @@
                 <column name="birth_date"
                         type="DATE"/>
                 <column name="email"
-                        type="VARCHAR(255)"/>
+                        type="VARCHAR(255)">
+                    <constraints unique="true"/>
+                </column>
                 <column name="active"
                         type="BOOLEAN"
                         defaultValueBoolean="true"/>
