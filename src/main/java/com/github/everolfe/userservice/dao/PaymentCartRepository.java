@@ -14,17 +14,14 @@ public interface PaymentCartRepository extends JpaRepository<PaymentCard, Long>,
         JpaSpecificationExecutor<PaymentCard> {
 
     @Modifying
-    @Transactional
     @Query("UPDATE PaymentCard pc SET pc.active = true WHERE pc.id = :id")
     int activateCard(@Param("id") Long id);
 
     @Modifying
-    @Transactional
     @Query("UPDATE PaymentCard pc SET pc.active = false WHERE pc.id = :id")
     int deactivateCard(@Param("id") Long id);
 
     @Modifying
-    @Transactional
     @Query("UPDATE PaymentCard pc SET " +
             "pc.number = COALESCE(:#{#card.number}, pc.number), " +
             "pc.holder = COALESCE(:#{#card.holder}, pc.holder), " +

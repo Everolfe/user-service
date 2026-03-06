@@ -14,17 +14,14 @@ public interface UserRepository extends JpaRepository<User, Long>,
         JpaSpecificationExecutor<User> {
 
     @Modifying
-    @Transactional
     @Query(value = "UPDATE users SET active = true WHERE id = :id", nativeQuery = true)
     int activateUserNative(@Param("id") Long id);
 
     @Modifying
-    @Transactional
     @Query(value = "UPDATE users SET active = false WHERE id = :id", nativeQuery = true)
     int deactivateUserNative(@Param("id") Long id);
 
     @Modifying
-    @Transactional
     @Query("UPDATE User u SET u.name = COALESCE(:#{#user.name}, u.name), " +
             "u.surname = COALESCE(:#{#user.surname}, u.surname), " +
             "u.birthDate = COALESCE(:#{#user.birthDate}, u.birthDate), " +
@@ -43,6 +40,4 @@ public interface UserRepository extends JpaRepository<User, Long>,
 
     @Query("SELECT SIZE(u.paymentCards) FROM User u WHERE u.id = :id")
     int getCardCountByUserId(@Param("id") Long id);
-
-
 }
