@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20260306-2" author="Everolfe">
+        <comment>Apply indexes for users and payment_cards tables</comment>
+
+        <createIndex indexName="idx_payment_cards_user_id"
+                     tableName="payment_cards">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_email"
+                     tableName="users"
+                     unique="true">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_active"
+                     tableName="users">
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_users_name_surname"
+                     tableName="users">
+            <column name="name"/>
+            <column name="surname"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_number"
+                     tableName="payment_cards"
+                     unique="true">
+            <column name="number"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_holder"
+                     tableName="payment_cards">
+            <column name="holder"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_active"
+                     tableName="payment_cards">
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_cards_user_active"
+                     tableName="payment_cards">
+            <column name="user_id"/>
+            <column name="active"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
