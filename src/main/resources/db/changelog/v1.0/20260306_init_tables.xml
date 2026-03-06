@@ -33,7 +33,9 @@
                 </column>
                 <column name="active"
                         type="BOOLEAN"
-                        defaultValueBoolean="true"/>
+                        defaultValueBoolean="true">
+                    <constraints nullable="false"/>
+                </column>
                 <column name="created_at"
                         type="TIMESTAMP">
                     <constraints
