@@ -14,18 +14,26 @@ public interface UserRepository extends JpaRepository<User, Long>,
         JpaSpecificationExecutor<User> {
 
     @Modifying
-    @Query(value = "UPDATE users SET active = true WHERE id = :id", nativeQuery = true)
+    @Query(value = "UPDATE users SET " +
+            "active = true, " +
+            "updated_at = CURRENT_TIMESTAMP " +
+            "WHERE id = :id", nativeQuery = true)
     int activateUserNative(@Param("id") Long id);
 
     @Modifying
-    @Query(value = "UPDATE users SET active = false WHERE id = :id", nativeQuery = true)
+    @Query(value = "UPDATE users SET " +
+            "active = false, " +
+            "updated_at = CURRENT_TIMESTAMP " +
+            "WHERE id = :id", nativeQuery = true)
     int deactivateUserNative(@Param("id") Long id);
 
     @Modifying
-    @Query("UPDATE User u SET u.name = COALESCE(:#{#user.name}, u.name), " +
+    @Query("UPDATE User u SET " +
+            "u.name = COALESCE(:#{#user.name}, u.name), " +
             "u.surname = COALESCE(:#{#user.surname}, u.surname), " +
             "u.birthDate = COALESCE(:#{#user.birthDate}, u.birthDate), " +
-            "u.email = COALESCE(:#{#user.email}, u.email) " +
+            "u.email = COALESCE(:#{#user.email}, u.email), " +
+            "u.updatedAt = CURRENT_TIMESTAMP " +
             "WHERE u.id = :#{#user.id}")
     int updateUserDynamic(@Param("user") User user);
 

@@ -14,11 +14,13 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
         JpaSpecificationExecutor<PaymentCard> {
 
     @Modifying
-    @Query("UPDATE PaymentCard pc SET pc.active = true WHERE pc.id = :id")
+    @Query("UPDATE PaymentCard pc SET pc.active = true," +
+            " pc.updatedAt = CURRENT_TIMESTAMP WHERE pc.id = :id")
     int activateCard(@Param("id") Long id);
 
     @Modifying
-    @Query("UPDATE PaymentCard pc SET pc.active = false WHERE pc.id = :id")
+    @Query("UPDATE PaymentCard pc SET pc.active = false,"
+            + " pc.updatedAt = CURRENT_TIMESTAMP WHERE pc.id = :id")
     int deactivateCard(@Param("id") Long id);
 
     @Modifying
@@ -26,6 +28,7 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
             "pc.number = COALESCE(:#{#card.number}, pc.number), " +
             "pc.holder = COALESCE(:#{#card.holder}, pc.holder), " +
             "pc.expirationDate = COALESCE(:#{#card.expirationDate}, pc.expirationDate), " +
+            "pc.updatedAt = CURRENT_TIMESTAMP, " +
             "pc.active = COALESCE(:#{#card.active}, pc.active) " +
             "WHERE pc.id = :#{#card.id}")
     int updateCardDynamic(@Param("card") PaymentCard card);
