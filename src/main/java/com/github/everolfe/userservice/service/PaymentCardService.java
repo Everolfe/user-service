@@ -13,6 +13,7 @@ import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCar
 import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMapper;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
