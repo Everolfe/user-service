@@ -76,7 +76,6 @@ public class PaymentCardService {
         return paymentCardRepository.findAll(spec, pageable)
                 .map(getPaymentCardMapper::toDto);
     }
-
     @Transactional
     public void activateCard(Long id){
         int activated = paymentCardRepository.activateCard(id);
@@ -114,7 +113,7 @@ public class PaymentCardService {
             throw new ResourceNotFoundException("Failed to update payment card with id: " + id);
         }
 
-        return getPaymentCardById(id);
+        return getPaymentCardMapper.toDto(updatedPaymentCard);
     }
 
     @Transactional
