@@ -32,9 +32,6 @@ public interface UserRepository extends JpaRepository<User, Long>,
     Page<User> findByNameContainingIgnoreCaseOrSurnameContainingIgnoreCase(
             String name, String surname, Pageable pageable);
 
-    Page<User> findByNameIgnoreCaseAndSurnameIgnoreCase(
-            String name, String surname, Pageable pageable);
-
     @Query("SELECT CASE WHEN COUNT(c) < 5 THEN true ELSE false END FROM PaymentCard c WHERE c.user.id = :userId")
     boolean canAddMoreCards(@Param("userId") Long userId);
 
