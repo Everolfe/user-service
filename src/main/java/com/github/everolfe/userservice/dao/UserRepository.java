@@ -40,4 +40,6 @@ public interface UserRepository extends JpaRepository<User, Long>,
 
     @Query("SELECT SIZE(u.paymentCards) FROM User u WHERE u.id = :id")
     int getCardCountByUserId(@Param("id") Long id);
+
+    boolean existsByEmail(String email);
 }
