@@ -1,6 +1,6 @@
 package com.github.everolfe.userservice.service;
 
-import com.github.everolfe.userservice.dao.PaymentCartRepository;
+import com.github.everolfe.userservice.dao.PaymentCardRepository;
 import com.github.everolfe.userservice.dao.PaymentCardSpecification;
 import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class PaymentCardService {
 
-    private final PaymentCartRepository paymentCardRepository;
+    private final PaymentCardRepository paymentCardRepository;
     private final UserRepository userRepository;
     private final GetPaymentCardMapper getPaymentCardMapper;
     private final CreatePaymentCardMapper createPaymentCardMapper;
@@ -55,12 +55,14 @@ public class PaymentCardService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GetPaymentCardDto> getPaymentCardsByUserId(Long userId, Pageable pageable) {
+    public List<GetPaymentCardDto> getPaymentCardsByUserId(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
-        return paymentCardRepository.findAllCardsByUserIdNative(userId, pageable)
-                .map(getPaymentCardMapper::toDto);
+        return paymentCardRepository.findAllCardsByUserId(userId)
+                .stream()
+                .map(getPaymentCardMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

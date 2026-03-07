@@ -1,6 +1,6 @@
 package com.github.everolfe.userservice.service;
 
-import com.github.everolfe.userservice.dao.PaymentCartRepository;
+import com.github.everolfe.userservice.dao.PaymentCardRepository;
 import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dao.UserSpecification;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
@@ -24,7 +24,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final CreateUserMapper createUserMapper;
     private final GetUserMapper getUserMapper;
-    private final PaymentCartRepository paymentCartRepository;
+    private final PaymentCardRepository paymentCardRepository;
 
     @Transactional
     public GetUserDto createUser(CreateUserDto createUserDto) {
