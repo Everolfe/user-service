@@ -11,6 +11,7 @@ import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCardMapper;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMapper;
+import java.util.stream.Collectors;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.List;
@@ -75,6 +76,7 @@ public class PaymentCardService {
         return paymentCardRepository.findAll(spec, pageable)
                 .map(getPaymentCardMapper::toDto);
     }
+
     @Transactional
     public void activateCard(Long id){
         int activated = paymentCardRepository.activateCard(id);

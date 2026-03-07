@@ -12,6 +12,7 @@ import com.github.everolfe.userservice.mapper.usermapper.CreateUserMapper;
 import com.github.everolfe.userservice.mapper.usermapper.GetUserMapper;
 import java.util.Optional;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -62,7 +63,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GetUserDto> searchUsersByNameOrSurname(String searchTerm, Pageable pageable) {
+    public Page<GetUserDto> searchUsersOnlyByNameOrSurname(String searchTerm, Pageable pageable) {
         return userRepository.findByNameContainingIgnoreCaseOrSurnameContainingIgnoreCase(
                         searchTerm, searchTerm, pageable)
                 .map(getUserMapper::toDto);
