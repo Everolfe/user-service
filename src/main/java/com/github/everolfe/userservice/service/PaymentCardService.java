@@ -12,6 +12,9 @@ import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCardMapper;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMapper;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.List;
@@ -41,6 +44,7 @@ public class PaymentCardService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "cards", key = "#cardId")
     public GetPaymentCardDto getPaymentCardById(Long cardId){
         Optional<PaymentCard> paymentCardOpt = paymentCardRepository.findById(cardId);
         if (paymentCardOpt.isPresent()) {
@@ -76,27 +80,31 @@ public class PaymentCardService {
         return paymentCardRepository.findAll(spec, pageable)
                 .map(getPaymentCardMapper::toDto);
     }
+
     @Transactional
-    public void activateCard(Long id){
-        int activated = paymentCardRepository.activateCard(id);
+    @Cacheable(value = "cards", key = "#cardId")
+    public void activateCard(Long cardId){
+        int activated = paymentCardRepository.activateCard(cardId);
         if(activated == 0){
-            throw new ResourceNotFoundException("No cards with id: " + id);
+            throw new ResourceNotFoundException("No cards with id: " + cardId);
         }
     }
 
     @Transactional
-    public void deactivateCard(Long id){
-        int deactivated = paymentCardRepository.deactivateCard(id);
+    @Cacheable(value = "cards", key = "#cardId")
+    public void deactivateCard(Long cardId){
+        int deactivated = paymentCardRepository.deactivateCard(cardId);
         if(deactivated == 0){
-            throw new ResourceNotFoundException("No cards with id: " + id);
+            throw new ResourceNotFoundException("No cards with id: " + cardId);
         }
     }
 
     @Transactional
+    @CachePut(value = "cards", key = "#cardId")
     public GetPaymentCardDto updatePaymentCard(
-            Long id, CreatePaymentCardDto createPaymentCardDto) {
+            Long cardId, CreatePaymentCardDto createPaymentCardDto) {
         PaymentCard paymentCard = paymentCardRepository
-                .findById(id).orElseThrow(() -> new ResourceNotFoundException("No card with id: " + id));
+                .findById(cardId).orElseThrow(() -> new ResourceNotFoundException("No card with id: " + cardId));
 
         if (createPaymentCardDto.getNumber() != null &&
                 !createPaymentCardDto.getNumber().equals(paymentCard.getNumber()) &&
@@ -105,23 +113,24 @@ public class PaymentCardService {
                     "Card with number " + createPaymentCardDto.getNumber() + " already exists");
         }
         PaymentCard updatedPaymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
-        updatedPaymentCard.setId(id);
+        updatedPaymentCard.setId(cardId);
 
         int updatedCount = paymentCardRepository.updateCardDynamic(updatedPaymentCard);
 
         if (updatedCount == 0) {
-            throw new ResourceNotFoundException("Failed to update payment card with id: " + id);
+            throw new ResourceNotFoundException("Failed to update payment card with id: " + cardId);
         }
 
         return getPaymentCardMapper.toDto(updatedPaymentCard);
     }
 
     @Transactional
-    public void deleteCard(Long id){
-        if (!paymentCardRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Payment card not found with id: " + id);
+    @CacheEvict(value = "cards", key = "#cardId")
+    public void deleteCard(Long cardId){
+        if (!paymentCardRepository.existsById(cardId)) {
+            throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
         }
-        paymentCardRepository.deleteById(id);
+        paymentCardRepository.deleteById(cardId);
     }
 
     @Transactional(readOnly = true)

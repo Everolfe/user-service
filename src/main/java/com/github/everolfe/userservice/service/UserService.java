@@ -12,6 +12,9 @@ import com.github.everolfe.userservice.mapper.usermapper.CreateUserMapper;
 import com.github.everolfe.userservice.mapper.usermapper.GetUserMapper;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,7 +27,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final CreateUserMapper createUserMapper;
     private final GetUserMapper getUserMapper;
-    private final PaymentCardRepository paymentCardRepository;
 
     @Transactional
     public GetUserDto createUser(CreateUserDto createUserDto) {
@@ -38,6 +40,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "users", key = "#id")
     public GetUserDto getUserById(Long id) {
         Optional<User> user = userRepository.findById(id);
         if (!user.isPresent()) {
@@ -68,6 +71,7 @@ public class UserService {
     }
 
     @Transactional
+    @Cacheable(value = "users", key = "#id")
     public void activateUser(Long id) {
         int activated = userRepository.activateUserNative(id);
         if (activated == 0) {
@@ -76,6 +80,7 @@ public class UserService {
     }
 
     @Transactional
+    @Cacheable(value = "users", key = "#id")
     public void deactivateUser(Long id) {
         int deactivated = userRepository.deactivateUserNative(id);
         if (deactivated == 0) {
@@ -84,6 +89,7 @@ public class UserService {
     }
 
     @Transactional
+    @CachePut(value = "users", key = "#id")
     public GetUserDto updateUser(Long id, CreateUserDto createUserDto) {
         User user = userRepository
                 .findById(id)
@@ -106,6 +112,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#id")
     public void deleteUser(Long id) {
         if(!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("No user with id" + id);
