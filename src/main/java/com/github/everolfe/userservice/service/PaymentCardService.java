@@ -36,6 +36,12 @@ public class PaymentCardService {
     @Transactional
     public GetPaymentCardDto create(CreatePaymentCardDto createPaymentCardDto, Long userId) {
         PaymentCard paymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
+        if (createPaymentCardDto.getNumber() != null &&
+                !createPaymentCardDto.getNumber().equals(paymentCard.getNumber()) &&
+                paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())) {
+            throw new DuplicateResourceException(
+                    "Card with number " + createPaymentCardDto.getNumber() + " already exists");
+        }
         Optional<User> user = userRepository.findById(userId);
         paymentCard.setUser(user
                 .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId)));
