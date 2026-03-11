@@ -1,6 +1,7 @@
 package com.github.everolfe.userservice.dto.userdto;
 
 import com.github.everolfe.userservice.dto.paymentcarddto.GetPaymentCardDto;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,7 +15,10 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class GetUserDto {
+public class GetUserDto implements
+        Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long id;
 
