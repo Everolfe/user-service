@@ -38,9 +38,16 @@ public class BaseIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
 
-        registry.add("spring.datasource.hikari.connection-timeout", () -> "60000");
         registry.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
+        registry.add("spring.datasource.hikari.minimum-idle", () -> "2");
+        registry.add("spring.datasource.hikari.connection-timeout", () -> "60000");
+        registry.add("spring.datasource.hikari.idle-timeout", () -> "600000");
+        registry.add("spring.datasource.hikari.max-lifetime", () -> "1200000");
+        registry.add("spring.datasource.hikari.keepalive-time", () -> "30000");
+        registry.add("spring.datasource.hikari.validation-timeout", () -> "5000");
+        registry.add("spring.datasource.hikari.leak-detection-threshold", () -> "10000");
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.jpa.show-sql", () -> "true");
