@@ -10,31 +10,6 @@ jobs:
   build-test-analyze:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: user_service_test
-          POSTGRES_USER: user_service
-          POSTGRES_PASSWORD: user_service
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,50 +34,19 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x ./mvnw
 
-      - name: Wait for PostgreSQL
+      - name: Verify Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U user_service; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting for PostgreSQL... ($i/30)"
-            sleep 2
-          done
+          docker version
+          docker-compose version
 
-      - name: Wait for Redis
+      - name: Configure Testcontainers
         run: |
-          sudo apt-get install -y redis-tools
-          for i in {1..30}; do
-            if redis-cli -h localhost -p 6379 ping; then
-              echo "Redis is ready!"
-              break
-            fi
-            echo "Waiting for Redis... ($i/30)"
-            sleep 2
-          done
-
-      # Устанавливаем переменные окружения для тестов
-      - name: Set up test environment
-        run: |
-          echo "SPRING_PROFILES_ACTIVE=ci" >> $GITHUB_ENV
-          echo "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/user_service_test" >> $GITHUB_ENV
-          echo "SPRING_DATASOURCE_USERNAME=user_service" >> $GITHUB_ENV
-          echo "SPRING_DATASOURCE_PASSWORD=user_service" >> $GITHUB_ENV
-          echo "SPRING_REDIS_HOST=localhost" >> $GITHUB_ENV
-          echo "SPRING_REDIS_PORT=6379" >> $GITHUB_ENV
+          echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
+          # Для ускорения тестов
+          echo "TESTCONTAINERS_REUSE_ENABLE=true" >> $GITHUB_ENV
 
       - name: Build and Test with Maven
         run: ./mvnw clean verify
-        env:
-          SPRING_PROFILES_ACTIVE: ci
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/user_service_test
-          SPRING_DATASOURCE_USERNAME: user_service
-          SPRING_DATASOURCE_PASSWORD: user_service
-          SPRING_REDIS_HOST: localhost
-          SPRING_REDIS_PORT: 6379
 
       - name: Analyze with SonarCloud
         if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') }}
