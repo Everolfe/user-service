@@ -10,31 +10,6 @@ jobs:
   build-test-analyze:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_DB: user_card_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7.2-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,26 +26,13 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x ./mvnw
 
-      - name: Wait for services to be ready
-        run: |
-          timeout 30s sh -c 'until nc -z localhost 5432; do sleep 2; done'
-          timeout 30s sh -c 'until nc -z localhost 6379; do sleep 2; done'
-
       - name: Build and Test with Maven
+        run: ./mvnw clean verify
         env:
-          # Test profile configuration
-          SPRING_PROFILES_ACTIVE: test
-          # Database
-          L_DB_USERNAME: postgres
-          L_DB_PASSWORD: postgres
-          L_DB_HOST_PORT: 5432
-          L_DB_NAME: user_card_db
-          # Redis
-          REDIS_PORT: 6379
-          # App
-          APP_PORT: 8081
-          LIQUIBASE_ENABLE: false
-        run: ./mvnw clean verify --no-transfer-progress
+          # Testcontainers будет использовать эти переменные для настройки
+          TESTCONTAINERS_REUSE_ENABLE: false
+          # Отключаем лишние логи
+          TESTCONTAINERS_LOG_LEVEL: WARN
 
       - name: Analyze with SonarCloud
         if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') }}
