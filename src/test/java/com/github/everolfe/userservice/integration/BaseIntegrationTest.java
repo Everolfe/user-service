@@ -1,10 +1,12 @@
 package com.github.everolfe.userservice.integration;
 
+import java.time.Duration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -17,14 +19,19 @@ public class BaseIntegrationTest {
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:15-alpine")
     )
-            .withReuse(true);;
+            .withReuse(false)
+            .withStartupTimeout(Duration.ofSeconds(120))
+            .withConnectTimeoutSeconds(120)
+            .waitingFor(Wait.forListeningPort());
 
     @Container
     static final GenericContainer<?> redis = new GenericContainer<>(
             DockerImageName.parse("redis:7.2-alpine")
     )
             .withExposedPorts(6379)
-            .withReuse(true);;
+            .withReuse(false)
+            .withStartupTimeout(Duration.ofSeconds(120))
+            .waitingFor(Wait.forListeningPort());
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
@@ -32,10 +39,19 @@ public class BaseIntegrationTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
 
+        registry.add("spring.datasource.hikari.connection-timeout", () -> "60000");
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
+
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.show-sql", () -> "true");
+        registry.add("spring.jpa.properties.hibernate.dialect",
+                () -> "org.hibernate.dialect.PostgreSQLDialect");
+
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379).toString());
 
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.cache.type", () -> "redis");
+
+        registry.add("spring.liquibase.enabled", () -> "false");
     }
 }
