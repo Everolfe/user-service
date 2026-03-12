@@ -1,7 +1,6 @@
 package com.github.everolfe.userservice.integration;
 
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -12,7 +11,6 @@ import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-@ActiveProfiles("test")
 public class BaseIntegrationTest {
 
     @Container
@@ -30,17 +28,13 @@ public class BaseIntegrationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("DB_URL", postgres::getJdbcUrl);
-        registry.add("DB_USERNAME", postgres::getUsername);
-        registry.add("DB_PASSWORD", postgres::getPassword);
-        registry.add("DB_DRIVER", () -> "org.postgresql.Driver");
-        registry.add("DB_DIALECT", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
 
-        registry.add("REDIS_HOST", redis::getHost);
-        registry.add("REDIS_PORT", () -> redis.getMappedPort(6379).toString());
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379).toString());
 
-        registry.add("SHOW_SQL", () -> "true");
-        registry.add("LIQUIBASE_ENABLE", () -> "false");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.cache.type", () -> "redis");
     }
