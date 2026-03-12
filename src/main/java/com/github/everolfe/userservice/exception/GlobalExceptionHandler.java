@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<GetErrorDto> duplicateResource(
-            ResourceNotFoundException ex, WebRequest request){
+            DuplicateResourceException ex, WebRequest request){
         return buildErrorResponse(
                 ex,
                 ex.getMessage(),

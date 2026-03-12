@@ -86,7 +86,7 @@ public class PaymentCardService {
     }
 
     @Transactional
-    @Cacheable(value = "cards", key = "#cardId")
+    @CacheEvict(value = "cards", key = "#cardId")
     public void activateCard(Long cardId){
         int activated = paymentCardRepository.activateCard(cardId);
         if(activated == 0){
@@ -95,7 +95,7 @@ public class PaymentCardService {
     }
 
     @Transactional
-    @Cacheable(value = "cards", key = "#cardId")
+    @CacheEvict(value = "cards", key = "#cardId")
     public void deactivateCard(Long cardId){
         int deactivated = paymentCardRepository.deactivateCard(cardId);
         if(deactivated == 0){

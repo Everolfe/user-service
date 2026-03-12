@@ -71,7 +71,7 @@ public class UserService {
     }
 
     @Transactional
-    @Cacheable(value = "users", key = "#id")
+    @CacheEvict(value = "users", key = "#id")
     public void activateUser(Long id) {
         int activated = userRepository.activateUserNative(id);
         if (activated == 0) {
@@ -80,7 +80,7 @@ public class UserService {
     }
 
     @Transactional
-    @Cacheable(value = "users", key = "#id")
+    @CacheEvict(value = "users", key = "#id")
     public void deactivateUser(Long id) {
         int deactivated = userRepository.deactivateUserNative(id);
         if (deactivated == 0) {
