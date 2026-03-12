@@ -37,7 +37,6 @@ jobs:
       - name: Verify Docker
         run: |
           docker version
-          docker-compose version
 
       - name: Configure Testcontainers
         run: |
