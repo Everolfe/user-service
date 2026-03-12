@@ -28,10 +28,6 @@ jobs:
 
       - name: Build and Test with Maven
         run: ./mvnw clean verify
-        env:
-          SPRING_PROFILES_ACTIVE: test  # <-- ВАЖНО!
-          TESTCONTAINERS_REUSE_ENABLE: false
-          TESTCONTAINERS_LOG_LEVEL: WARN
 
       - name: Analyze with SonarCloud
         if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') }}
