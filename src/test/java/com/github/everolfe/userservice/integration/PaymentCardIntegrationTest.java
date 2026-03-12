@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.test.annotation.DirtiesContext;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +27,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class PaymentCardIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_PATH = "/api/cards";
