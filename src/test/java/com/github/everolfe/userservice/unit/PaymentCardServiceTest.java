@@ -2,7 +2,6 @@ package com.github.everolfe.userservice.unit;
 
 
 import com.github.everolfe.userservice.dao.PaymentCardRepository;
-import com.github.everolfe.userservice.dao.PaymentCardSpecification;
 import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
 import com.github.everolfe.userservice.dto.paymentcarddto.GetPaymentCardDto;
@@ -16,7 +15,6 @@ import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMa
 import com.github.everolfe.userservice.service.PaymentCardService;
 import java.util.List;
 import java.util.Set;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -176,7 +174,7 @@ public class PaymentCardServiceTest {
         List<GetPaymentCardDto> result = paymentCardService.getPaymentCardsByUserId(1L);
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(10L, result.get(0).getId());
+        assertEquals(10L, result.getFirst().getId());
     }
 
     @Test
@@ -230,10 +228,10 @@ public class PaymentCardServiceTest {
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.getTotalElements()),
                 () -> assertEquals(2, result.getContent().size()),
-                () -> assertEquals(10L, result.getContent().get(0).getId()),
+                () -> assertEquals(10L, result.getContent().getFirst().getId()),
                 () -> assertEquals(11L, result.getContent().get(1).getId()),
-                () -> assertEquals("1111222233334444", result.getContent().get(0).getNumber()),
-                () -> assertEquals(1L, result.getContent().get(0).getUserId())
+                () -> assertEquals("1111222233334444", result.getContent().getFirst().getNumber()),
+                () -> assertEquals(1L, result.getContent().getFirst().getUserId())
         );
 
         verify(paymentCardRepository, times(1))
@@ -335,11 +333,11 @@ public class PaymentCardServiceTest {
         createPaymentCardDto.setNumber("123456789");
         PaymentCard paymentCardEntity = new PaymentCard();
 
-        when(paymentCardRepository.findById(10l)).thenReturn(Optional.of(paymentCardEntity));
+        when(paymentCardRepository.findById(10L)).thenReturn(Optional.of(paymentCardEntity));
         when(paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class,
-                () -> paymentCardService.updatePaymentCard(10l,createPaymentCardDto));
+                () -> paymentCardService.updatePaymentCard(10L,createPaymentCardDto));
 
     }
 
@@ -364,7 +362,7 @@ public class PaymentCardServiceTest {
         when(paymentCardRepository.existsByNumber("123")).thenReturn(true);
         boolean result = paymentCardService.existsByNumber("123");
 
-        assertEquals(true, result);
+        assertTrue(result);
 
         verify(paymentCardRepository,times(1)).existsByNumber("123");
     }
@@ -381,7 +379,7 @@ public class PaymentCardServiceTest {
 
         boolean result = paymentCardService.canAddCardToUser(userId);
 
-        assertEquals(true, result);
+        assertTrue(result);
 
         verify(userRepository,times(1)).existsById(userId);
         verify(paymentCardRepository,times(1)).canAddCardToUser(userId);
@@ -483,9 +481,9 @@ public class PaymentCardServiceTest {
         assertAll(
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.size()),
-                () -> assertEquals(10L, result.get(0).getId()),
-                () -> assertEquals("1111222233334444", result.get(0).getNumber()),
-                () -> assertEquals(userId, result.get(0).getUserId()),
+                () -> assertEquals(10L, result.getFirst().getId()),
+                () -> assertEquals("1111222233334444", result.getFirst().getNumber()),
+                () -> assertEquals(userId, result.getFirst().getUserId()),
                 () -> assertEquals(11L, result.get(1).getId()),
                 () -> assertEquals("5555666677778888", result.get(1).getNumber()),
                 () -> assertEquals(userId, result.get(1).getUserId())

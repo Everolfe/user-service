@@ -3,8 +3,6 @@ package com.github.everolfe.userservice.dao;
 import com.github.everolfe.userservice.entity.PaymentCard;
 import java.util.List;
 import java.util.Set;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -27,11 +25,6 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
     @Query("SELECT pc FROM PaymentCard pc WHERE pc.user.id = :userId")
     List<PaymentCard> findAllCardsByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT pc FROM PaymentCard pc WHERE pc.user.name LIKE %:name% AND pc.user.surname LIKE %:surname%")
-    Page<PaymentCard> findCardsByUserNameAndSurname(@Param("name") String name,
-                                                    @Param("surname") String surname,
-                                                    Pageable pageable);
-
     @Query("SELECT CASE WHEN COUNT(pc) < 5 THEN true ELSE false END FROM PaymentCard pc WHERE pc.user.id = :userId")
     boolean canAddCardToUser(@Param("userId") Long userId);
 
@@ -42,4 +35,11 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
 
     @Query("SELECT pc.number FROM PaymentCard pc WHERE pc.number IN :numbers")
     List<String> findExistingNumbers(@Param("numbers") Set<String> numbers);
+
+    @Modifying
+    @Query("UPDATE PaymentCard c SET c.active = false WHERE c.user.id = :userId AND c.active = true")
+    int deactivateAllCardsByUserId(Long userId);
+
+    @Query("SELECT c.id FROM PaymentCard c WHERE c.user.id = :userId")
+    List<Long> findCardIdsByUserId(Long userId);
 }

@@ -3,7 +3,6 @@ package com.github.everolfe.userservice.dao;
 import com.github.everolfe.userservice.entity.User;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Path;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
@@ -21,7 +20,7 @@ public class UserSpecification {
                             createLikePredicate(criteriaBuilder, root.get("surname"), surname)
                     ).filter(Optional::isPresent)
                     .map(Optional::get)
-                    .toList(); ;
+                    .toList();
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };

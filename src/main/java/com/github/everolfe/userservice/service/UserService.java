@@ -15,6 +15,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -30,6 +32,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final CreateUserMapper createUserMapper;
     private final GetUserMapper getUserMapper;
+    private final PaymentCardRepository paymentCardRepository;
+    private final CacheManager cacheManager;
 
     @Transactional
     public GetUserDto createUser(CreateUserDto createUserDto) {
@@ -46,7 +50,7 @@ public class UserService {
     @Cacheable(value = "users", key = "#id")
     public GetUserDto getUserById(Long id) {
         Optional<User> user = userRepository.findById(id);
-        if (!user.isPresent()) {
+        if (user.isEmpty()) {
             throw new ResourceNotFoundException("User not found with id" + id);
         } else {
             return getUserMapper.toDto(user.get());
@@ -90,6 +94,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         user.setActive(false);
         userRepository.save(user);
+        deactivateUserCards(id);
         return getUserMapper.toDto(user);
     }
 
@@ -106,6 +111,10 @@ public class UserService {
             throw new DuplicateResourceException(
                     "User with email " + createUserDto.getEmail() + " already exists");
         }
+
+        boolean isDeactivating = Boolean.TRUE.equals(user.getActive()) &&
+                Boolean.FALSE.equals(createUserDto.getActive());
+
         User updatedUser = createUserMapper.toEntity(createUserDto);
         updatedUser.setId(id);
 
@@ -113,6 +122,11 @@ public class UserService {
         if (updatedCount == 0) {
             throw new ResourceNotFoundException("Failed to update user with id" + id);
         }
+
+        if (isDeactivating) {
+            deactivateUserCards(id);
+        }
+
         return getUserMapper.toDto(updatedUser);
     }
 
@@ -124,6 +138,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
         user.setActive(false);
         userRepository.save(user);
+        deactivateUserCards(id);
     }
 
     @Transactional
@@ -170,6 +185,16 @@ public class UserService {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
         return userRepository.getCardCountByUserId(userId);
+    }
+
+    private void deactivateUserCards(Long userId) {
+        paymentCardRepository.deactivateAllCardsByUserId(userId);
+
+        Cache cardsCache = cacheManager.getCache("cards");
+        if (cardsCache != null) {
+            List<Long> cardIds = paymentCardRepository.findCardIdsByUserId(userId);
+            cardIds.forEach(cardsCache::evict);
+        }
     }
 
 }

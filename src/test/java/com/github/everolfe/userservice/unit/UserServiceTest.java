@@ -1,5 +1,6 @@
 package com.github.everolfe.userservice.unit;
 
+import com.github.everolfe.userservice.dao.PaymentCardRepository;
 import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceTest {
+class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -48,6 +50,9 @@ public class UserServiceTest {
 
     @Mock
     private GetUserMapper getUserMapper;
+
+    @Mock
+    private PaymentCardRepository paymentCardRepository;
 
     @InjectMocks
     private UserService userService;
@@ -115,7 +120,7 @@ public class UserServiceTest {
         Pageable pageable = Pageable.unpaged();
         User user = new User();
 
-        Page<User> page = new PageImpl<User>(List.of(user));
+        Page<User> page = new PageImpl<>(List.of(user));
 
         when(userRepository.findAll(pageable)).thenReturn(page);
 
@@ -170,11 +175,12 @@ public class UserServiceTest {
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.getTotalElements()),
                 () -> assertEquals(2, result.getContent().size()),
-                () -> assertEquals(1L, result.getContent().get(0).getId()),
+                () -> assertEquals(1L, result.getContent().getFirst().getId()),
                 () -> assertEquals(2L, result.getContent().get(1).getId()),
-                () -> assertEquals("John", result.getContent().get(0).getName()),
-                () -> assertEquals("Doe", result.getContent().get(0).getSurname()),
-                () -> assertEquals("john.doe@example.com", result.getContent().get(0).getEmail())
+                () -> assertEquals("John", result.getContent().getFirst().getName()),
+                () -> assertEquals("Doe", result.getContent().getFirst().getSurname()),
+                () -> assertEquals("john.doe@example.com", result.getContent()
+                        .getFirst().getEmail())
         );
 
         verify(userRepository, times(1))
@@ -233,11 +239,11 @@ public class UserServiceTest {
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.getTotalElements()),
                 () -> assertEquals(2, result.getContent().size()),
-                () -> assertEquals(1L, result.getContent().get(0).getId()),
-                () -> assertEquals(2L, result.getContent().get(1).getId()),
-                () -> assertTrue(result.getContent().get(0).getName()
+                () -> assertEquals(1L, result.getContent().getFirst().getId()),
+                () -> assertEquals(2L, result.getContent().getFirst().getId()),
+                () -> assertTrue(result.getContent().getFirst().getName()
                         .toLowerCase().contains(searchTerm) ||
-                        result.getContent().get(0).getSurname()
+                        result.getContent().getFirst().getSurname()
                                 .toLowerCase().contains(searchTerm)),
                 () -> assertTrue(result.getContent().get(1).getName()
                         .toLowerCase().contains(searchTerm) ||
@@ -254,12 +260,12 @@ public class UserServiceTest {
     void testActivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
-        when(userRepository.findById(1l))
+        when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
         when(getUserMapper.toDto(user)).thenReturn(dto);
-        userService.activateUser(1l);
-        verify(userRepository, times(1)).findById(1l);
+        userService.activateUser(1L);
+        verify(userRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(user);
         verify(getUserMapper, times(1)).toDto(user);
     }
@@ -267,19 +273,20 @@ public class UserServiceTest {
     @Test
     void testActivateUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class, () ->
-                userService.activateUser(1l));
+                userService.activateUser(1L));
     }
 
     @Test
     void testDeactivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
-        when(userRepository.findById(1l))
+        when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
         when(getUserMapper.toDto(user)).thenReturn(dto);
-        userService.deactivateUser(1l);
-        verify(userRepository, times(1)).findById(1l);
+        when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
+        userService.deactivateUser(1L);
+        verify(userRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(user);
         verify(getUserMapper, times(1)).toDto(user);
     }
@@ -348,7 +355,7 @@ public class UserServiceTest {
     void testUpdateUserWithIncorrectId() {
         CreateUserDto createUserDto = new CreateUserDto();
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.updateUser(1l, createUserDto));
+                () -> userService.updateUser(1L, createUserDto));
     }
 
     @Test
@@ -373,6 +380,7 @@ public class UserServiceTest {
         User user = new User();
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
+        when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
         userService.deleteUser(userId);
 
         verify(userRepository, times(1)).findById(userId);
@@ -399,7 +407,7 @@ public class UserServiceTest {
         when(userRepository.canAddMoreCards(userId)).thenReturn(true);
 
         boolean result = userService.canAddMoreCards(userId);
-        assertEquals(true, result);
+        assertTrue(result);
 
         verify(userRepository, times(1)).canAddMoreCards(userId);
         verify(userRepository, times(1)).existsById(userId);
@@ -492,8 +500,8 @@ public class UserServiceTest {
         assertAll(
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.size()),
-                () -> assertEquals(1L, result.get(0).getId()),
-                () -> assertEquals("user1@test.com", result.get(0).getEmail()),
+                () -> assertEquals(1L, result.getFirst().getId()),
+                () -> assertEquals("user1@test.com", result.getFirst().getEmail()),
                 () -> assertEquals(2L, result.get(1).getId()),
                 () -> assertEquals("user2@test.com", result.get(1).getEmail())
         );

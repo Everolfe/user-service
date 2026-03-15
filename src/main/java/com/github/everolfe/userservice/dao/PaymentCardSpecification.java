@@ -5,7 +5,6 @@ import com.github.everolfe.userservice.entity.User;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Path;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;
@@ -25,7 +24,7 @@ public class PaymentCardSpecification {
                             createLikePredicate(criteriaBuilder, userJoin.get("surname"), surname)
                     ).filter(Optional::isPresent)
                     .map(Optional::get)
-                    .toList(); ;
+                    .toList();
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
