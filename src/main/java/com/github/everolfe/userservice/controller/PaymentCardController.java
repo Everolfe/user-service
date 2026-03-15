@@ -27,6 +27,15 @@ public class PaymentCardController {
         return new ResponseEntity<>(createdCard, HttpStatus.CREATED);
     }
 
+    @PostMapping("/user/{userId}/batch")
+    public ResponseEntity<List<GetPaymentCardDto>> createMultiple(
+            @PathVariable Long userId,
+            @Valid @RequestBody List<CreatePaymentCardDto> paymentCardDtos) {
+        List<GetPaymentCardDto> createdCards = paymentCardService
+                .createMultiple(paymentCardDtos, userId);
+        return new ResponseEntity<>(createdCards, HttpStatus.CREATED);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<GetPaymentCardDto> get(@PathVariable Long id) {
         GetPaymentCardDto card = paymentCardService.getPaymentCardById(id);
@@ -56,15 +65,15 @@ public class PaymentCardController {
     }
 
     @PatchMapping("/{id}/activate")
-    public ResponseEntity<Void> activate(@PathVariable Long id) {
-        paymentCardService.activateCard(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<GetPaymentCardDto> activate(@PathVariable Long id) {
+        GetPaymentCardDto result = paymentCardService.activateCard(id);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PatchMapping("{id}/deactivate")
-    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        paymentCardService.deactivateCard(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<GetPaymentCardDto> deactivate(@PathVariable Long id) {
+        GetPaymentCardDto result = paymentCardService.deactivateCard(id);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
@@ -76,9 +85,9 @@ public class PaymentCardController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        paymentCardService.deleteCard(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<GetPaymentCardDto> delete(@PathVariable Long id) {
+        GetPaymentCardDto result = paymentCardService.deleteCard(id);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @GetMapping("/exists/{number}")

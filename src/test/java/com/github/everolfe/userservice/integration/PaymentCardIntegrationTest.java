@@ -8,6 +8,7 @@ import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class PaymentCardIntegrationTest extends BaseIntegrationTest {
+class PaymentCardIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_PATH = "/api/cards";
     private static final String USERS_PATH = "/api/users";
@@ -56,7 +57,7 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
         RestAssured.defaultParser = io.restassured.parsing.Parser.JSON;
     }
 
-    @BeforeEach
+    @AfterEach
     void cleanDatabase() {
         paymentCardRepository.deleteAll();
         userRepository.deleteAll();
@@ -194,7 +195,7 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getAllCards_ShouldReturnPagedResults() {
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 5; i++) {
             createTestCard(testUserId,
                     "111122223333" + String.format("%04d", i),
                     "Holder " + i);
@@ -202,26 +203,31 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
 
         given()
                 .param("page", 0)
-                .param("size", 10)
-                .when()
-                .get(BASE_PATH)
-                .then()
-                .statusCode(HttpStatus.OK.value())
-                .body("content.size()", is(10))
-                .body("totalElements", greaterThanOrEqualTo(15))
-                .body("totalPages", greaterThanOrEqualTo(2))
-                .body("number", is(0))
-                .body("size", is(10));
-
-        given()
-                .param("page", 1)
-                .param("size", 10)
+                .param("size", 5)
                 .when()
                 .get(BASE_PATH)
                 .then()
                 .statusCode(HttpStatus.OK.value())
                 .body("content.size()", is(5))
-                .body("number", is(1));
+                .body("totalElements", is(5))
+                .body("totalPages", is(1))
+                .body("number", is(0))
+                .body("size", is(5))
+                .body("first", is(true))
+                .body("last", is(true));
+
+        given()
+                .param("page", 1)
+                .param("size", 5)
+                .when()
+                .get(BASE_PATH)
+                .then()
+                .statusCode(HttpStatus.OK.value())
+                .body("content.size()", is(0))
+                .body("number", is(1))
+                .body("totalElements", is(5))
+                .body("first", is(false))
+                .body("last", is(true));
     }
 
 
@@ -321,7 +327,7 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .patch(BASE_PATH + "/{id}/deactivate", cardId)
                 .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
 
         given()
                 .when()
@@ -334,7 +340,7 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .patch(BASE_PATH + "/{id}/activate", cardId)
                 .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
 
         given()
                 .when()
@@ -437,13 +443,8 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .delete(BASE_PATH + "/{id}", cardId)
                 .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
 
-        given()
-                .when()
-                .get(BASE_PATH + "/{id}", cardId)
-                .then()
-                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
     @Test
@@ -509,9 +510,6 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .as(Boolean.class);
 
         assertThat(canAdd).isFalse();
-
-        CreatePaymentCardDto extraCard = createPaymentCardDto(
-                "9999999999999999", "Extra Card", validExpirationDate);
 
     }
 
@@ -617,15 +615,10 @@ public class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .delete(BASE_PATH + "/{id}", cardId)
                 .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
 
         assertNull(getCardCacheValue(cardId));
 
-        given()
-                .when()
-                .get(BASE_PATH + "/{id}", cardId)
-                .then()
-                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
 

@@ -18,7 +18,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<GetErrorDto> resourceNotFound(
             ResourceNotFoundException ex, WebRequest request) {
         return buildErrorResponse(
-                ex,
                 ex.getMessage(),
                 HttpStatus.NOT_FOUND,
                 request
@@ -29,13 +28,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<GetErrorDto> duplicateResource(
             DuplicateResourceException ex, WebRequest request){
         return buildErrorResponse(
-                ex,
                 ex.getMessage(),
                 HttpStatus.CONFLICT,
                 request);
     }
+
+    @ExceptionHandler(CardsOutOfBoundsException.class)
+    public ResponseEntity<GetErrorDto> cardsOutOfBounds(
+            DuplicateResourceException ex, WebRequest request){
+        return buildErrorResponse(
+                ex.getMessage(),
+                HttpStatus.CONFLICT,
+                request);
+    }
+
     private ResponseEntity<GetErrorDto> buildErrorResponse(
-            Exception ex, String message, HttpStatus status, WebRequest request) {
+            String message, HttpStatus status, WebRequest request) {
 
         GetErrorDto errorDto = new GetErrorDto(
                 LocalDateTime.now(),

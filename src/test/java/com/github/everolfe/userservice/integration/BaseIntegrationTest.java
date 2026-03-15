@@ -50,7 +50,6 @@ public class BaseIntegrationTest {
         registry.add("spring.datasource.hikari.leak-detection-threshold", () -> "10000");
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("spring.jpa.show-sql", () -> "true");
         registry.add("spring.jpa.properties.hibernate.dialect",
                 () -> "org.hibernate.dialect.PostgreSQLDialect");
 

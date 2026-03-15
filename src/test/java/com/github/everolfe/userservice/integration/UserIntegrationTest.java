@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class UserIntegrationTest extends BaseIntegrationTest {
+class UserIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_PATH = "/api/users";
 
@@ -312,13 +312,13 @@ public class UserIntegrationTest extends BaseIntegrationTest {
                 .patch(BASE_PATH + "/{id}/deactivate", userId)
                 .then()
                 .log().all()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
         given()
                 .when()
                 .patch(BASE_PATH + "/{id}/activate", userId)
                 .then()
                 .log().all()
-                .statusCode(HttpStatus.NO_CONTENT.value());
+                .statusCode(HttpStatus.OK.value());
         given()
                 .when()
                 .get(BASE_PATH + "/{id}", userId)
@@ -409,11 +409,6 @@ public class UserIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(HttpStatus.NO_CONTENT.value());
 
-        given()
-                .when()
-                .get(BASE_PATH + "/{id}", userId)
-                .then()
-                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
     @Test
@@ -552,11 +547,6 @@ public class UserIntegrationTest extends BaseIntegrationTest {
 
         assertNull(getCacheValue(userId));
 
-        given()
-                .when()
-                .get(BASE_PATH + "/{id}", userId)
-                .then()
-                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
 

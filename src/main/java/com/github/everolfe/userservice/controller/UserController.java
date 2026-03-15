@@ -5,6 +5,7 @@ import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
 import com.github.everolfe.userservice.service.UserService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,13 @@ public class UserController {
     public ResponseEntity<GetUserDto> createUser(@RequestBody CreateUserDto createUserDto) {
         GetUserDto getUserDto = userService.createUser(createUserDto);
         return new ResponseEntity<>(getUserDto, HttpStatus.OK);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<List<GetUserDto>> createMultipleUsers(@Valid @RequestBody List<CreateUserDto> createUserDtos) {
+        List<GetUserDto> createdUsers = userService
+                .createMultipleUsers(createUserDtos);
+        return new ResponseEntity<>(createdUsers, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
@@ -57,15 +65,15 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/activate")
-    public ResponseEntity<Void> activateUser(@PathVariable Long id) {
-        userService.activateUser(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<GetUserDto> activateUser(@PathVariable Long id) {
+        GetUserDto result = userService.activateUser(id);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<Void> deactivateUser(@PathVariable Long id) {
-        userService.deactivateUser(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<GetUserDto> deactivateUser(@PathVariable Long id) {
+        GetUserDto result = userService.deactivateUser(id);
+        return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
