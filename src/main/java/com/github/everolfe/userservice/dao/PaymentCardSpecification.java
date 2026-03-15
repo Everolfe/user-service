@@ -14,6 +14,8 @@ import java.util.List;
 
 public class PaymentCardSpecification {
 
+    private PaymentCardSpecification() {}
+
     public static Specification<PaymentCard> byUserNameAndSurname(String name, String surname) {
         return (root, query, criteriaBuilder) -> {
             Join<PaymentCard, User> userJoin = root.join("user");
@@ -23,7 +25,7 @@ public class PaymentCardSpecification {
                             createLikePredicate(criteriaBuilder, userJoin.get("surname"), surname)
                     ).filter(Optional::isPresent)
                     .map(Optional::get)
-                    .collect(Collectors.toList());
+                    .toList(); ;
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };

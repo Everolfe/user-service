@@ -3,10 +3,8 @@ package com.github.everolfe.userservice.mapper.paymentcardmapper;
 import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
 import com.github.everolfe.userservice.entity.PaymentCard;
 import com.github.everolfe.userservice.mapper.BaseMapper;
-import java.time.LocalDate;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 
 @Mapper(config = BaseMapper.class)
 public interface CreatePaymentCardMapper extends

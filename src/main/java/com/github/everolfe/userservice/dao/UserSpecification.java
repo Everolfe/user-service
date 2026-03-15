@@ -21,7 +21,7 @@ public class UserSpecification {
                             createLikePredicate(criteriaBuilder, root.get("surname"), surname)
                     ).filter(Optional::isPresent)
                     .map(Optional::get)
-                    .collect(Collectors.toList());
+                    .toList(); ;
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };

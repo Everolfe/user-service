@@ -20,7 +20,7 @@ public class CreatePaymentCardDto {
     private String holder;
 
     @NotBlank
-    @Pattern(regexp = "^(0[1-9]|1[0-2])/([0-9]{2})$", message = "Invalid format. Must be MM/YY")
+    @Pattern(regexp = "^(0[1-9]|1[0-2])/(\\d{2})$", message = "Invalid format. Must be MM/YY")
     private String expirationDate;
 
     private Boolean active;

@@ -2,7 +2,6 @@ package com.github.everolfe.userservice.mapper;
 
 import java.util.List;
 import org.mapstruct.MapperConfig;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingConstants.ComponentModel;
 import org.mapstruct.NullValueMappingStrategy;
 import org.mapstruct.NullValuePropertyMappingStrategy;

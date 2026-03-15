@@ -1,31 +1,22 @@
 package com.github.everolfe.userservice.dao;
 
 import com.github.everolfe.userservice.entity.User;
-import jakarta.transaction.Transactional;
+import jakarta.persistence.LockModeType;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long>,
         JpaSpecificationExecutor<User> {
-
-    @Modifying
-    @Query(value = "UPDATE users SET " +
-            "active = true, " +
-            "updated_at = CURRENT_TIMESTAMP " +
-            "WHERE id = :id", nativeQuery = true)
-    int activateUserNative(@Param("id") Long id);
-
-    @Modifying
-    @Query(value = "UPDATE users SET " +
-            "active = false, " +
-            "updated_at = CURRENT_TIMESTAMP " +
-            "WHERE id = :id", nativeQuery = true)
-    int deactivateUserNative(@Param("id") Long id);
 
     @Modifying
     @Query("UPDATE User u SET " +
@@ -47,4 +38,14 @@ public interface UserRepository extends JpaRepository<User, Long>,
     int getCardCountByUserId(@Param("id") Long id);
 
     boolean existsByEmail(String email);
+
+    @EntityGraph(attributePaths = {"paymentCards"})
+    Page<User> findAll(Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.paymentCards WHERE u.id = :userId")
+    Optional<User> findByIdWithPessimisticLock(@Param("userId") Long userId);
+
+    @Query("SELECT u.email FROM User u WHERE u.email IN :emails")
+    List<String> findExistingEmails(@Param("emails") Set<String> emails);
 }

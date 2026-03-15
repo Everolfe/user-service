@@ -2,6 +2,7 @@ package com.github.everolfe.userservice.dao;
 
 import com.github.everolfe.userservice.entity.PaymentCard;
 import java.util.List;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,16 +13,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
         JpaSpecificationExecutor<PaymentCard> {
-
-    @Modifying
-    @Query("UPDATE PaymentCard pc SET pc.active = true," +
-            " pc.updatedAt = CURRENT_TIMESTAMP WHERE pc.id = :id")
-    int activateCard(@Param("id") Long id);
-
-    @Modifying
-    @Query("UPDATE PaymentCard pc SET pc.active = false,"
-            + " pc.updatedAt = CURRENT_TIMESTAMP WHERE pc.id = :id")
-    int deactivateCard(@Param("id") Long id);
 
     @Modifying
     @Query("UPDATE PaymentCard pc SET " +
@@ -48,4 +39,7 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long>,
     int countCardsByUserId(@Param("userId") Long userId);
 
     boolean existsByNumber(String number);
+
+    @Query("SELECT pc.number FROM PaymentCard pc WHERE pc.number IN :numbers")
+    List<String> findExistingNumbers(@Param("numbers") Set<String> numbers);
 }
