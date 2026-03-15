@@ -10,7 +10,10 @@ import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.mapper.usermapper.CreateUserMapper;
 import com.github.everolfe.userservice.mapper.usermapper.GetUserMapper;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -71,21 +74,23 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
-    public void activateUser(Long id) {
-        int activated = userRepository.activateUserNative(id);
-        if (activated == 0) {
-            throw new ResourceNotFoundException("User not found with id" + id);
-        }
+    @CachePut(value = "users", key = "#id")
+    public GetUserDto activateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        user.setActive(true);
+        userRepository.save(user);
+        return getUserMapper.toDto(user);
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
-    public void deactivateUser(Long id) {
-        int deactivated = userRepository.deactivateUserNative(id);
-        if (deactivated == 0) {
-            throw new ResourceNotFoundException("User not found with id" + id);
-        }
+    @CachePut(value = "users", key = "#id")
+    public GetUserDto  deactivateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        user.setActive(false);
+        userRepository.save(user);
+        return getUserMapper.toDto(user);
     }
 
     @Transactional
@@ -114,11 +119,42 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users", key = "#id")
     public void deleteUser(Long id) {
-        if(!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("No user with id" + id);
-        }
-        userRepository.deleteById(id);
+        User user = userRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
+        user.setActive(false);
+        userRepository.save(user);
     }
+
+    @Transactional
+    public List<GetUserDto> createMultipleUsers(List<CreateUserDto> createUserDtos) {
+        Set<String> emailsInRequest = createUserDtos.stream()
+                .map(CreateUserDto::getEmail)
+                .collect(Collectors.toSet());
+
+        if (emailsInRequest.size() != createUserDtos.size()) {
+            throw new DuplicateResourceException("Duplicate emails in request");
+        }
+
+        List<String> existingEmails = userRepository.findExistingEmails(emailsInRequest);
+        if (!existingEmails.isEmpty()) {
+            throw new DuplicateResourceException(
+                    "Users with emails already exist: " + String.join(", ", existingEmails));
+        }
+
+        List<User> users = createUserMapper.toEntities(createUserDtos);
+
+        users.forEach(user -> {
+            if (user.getActive() == null) {
+                user.setActive(true);
+            }
+        });
+
+        List<User> savedUsers = userRepository.saveAll(users);
+
+        return getUserMapper.toDtos(savedUsers);
+    }
+
 
     @Transactional(readOnly = true)
     public boolean canAddMoreCards(Long userId) {
@@ -135,4 +171,5 @@ public class UserService {
         }
         return userRepository.getCardCountByUserId(userId);
     }
+
 }

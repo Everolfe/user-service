@@ -13,6 +13,7 @@ import com.github.everolfe.userservice.service.UserService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,7 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -249,10 +252,16 @@ public class UserServiceTest {
 
     @Test
     void testActivateUserSuccess() {
-        when(userRepository.activateUserNative(1l))
-                .thenReturn(1);
+        User user = new User();
+        GetUserDto dto = new GetUserDto();
+        when(userRepository.findById(1l))
+                .thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(getUserMapper.toDto(user)).thenReturn(dto);
         userService.activateUser(1l);
-        verify(userRepository, times(1)).activateUserNative(1l);
+        verify(userRepository, times(1)).findById(1l);
+        verify(userRepository, times(1)).save(user);
+        verify(getUserMapper, times(1)).toDto(user);
     }
 
     @Test
@@ -263,11 +272,16 @@ public class UserServiceTest {
 
     @Test
     void testDeactivateUserSuccess() {
-        when(userRepository.deactivateUserNative(1l))
-                .thenReturn(1);
+        User user = new User();
+        GetUserDto dto = new GetUserDto();
+        when(userRepository.findById(1l))
+                .thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(getUserMapper.toDto(user)).thenReturn(dto);
         userService.deactivateUser(1l);
-        verify(userRepository, times(1))
-                .deactivateUserNative(1l);
+        verify(userRepository, times(1)).findById(1l);
+        verify(userRepository, times(1)).save(user);
+        verify(getUserMapper, times(1)).toDto(user);
     }
 
     @Test
@@ -356,13 +370,13 @@ public class UserServiceTest {
     @Test
     void testDeleteUserSuccess() {
         Long userId = 1L;
-
-        when(userRepository.existsById(userId)).thenReturn(true);
-
+        User user = new User();
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
         userService.deleteUser(userId);
 
-        verify(userRepository, times(1)).deleteById(userId);
-        verify(userRepository, times(1)).deleteById(userId);
+        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).save(user);
     }
 
     @Test
@@ -422,5 +436,172 @@ public class UserServiceTest {
     void testGetCardCountByUserIdWithIncorrectId(){
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.getCardCountByUserId(1L));
+    }
+
+    @Test
+    void testCreateMultipleUsersSuccess() {
+        CreateUserDto dto1 = new CreateUserDto();
+        dto1.setEmail("user1@test.com");
+        dto1.setName("John");
+        dto1.setSurname("Doe");
+
+        CreateUserDto dto2 = new CreateUserDto();
+        dto2.setEmail("user2@test.com");
+        dto2.setName("Jane");
+        dto2.setSurname("Smith");
+
+        List<CreateUserDto> dtos = List.of(dto1, dto2);
+
+        User user1 = new User();
+        user1.setEmail("user1@test.com");
+
+        User user2 = new User();    user2.setEmail("user2@test.com");
+
+        List<User> usersToSave = List.of(user1, user2);
+
+        User savedUser1 = new User();
+        savedUser1.setId(1L);
+        savedUser1.setEmail("user1@test.com");
+        savedUser1.setActive(true);
+
+        User savedUser2 = new User();
+        savedUser2.setId(2L);
+        savedUser2.setEmail("user2@test.com");
+        savedUser2.setActive(true);
+
+        List<User> savedUsers = List.of(savedUser1, savedUser2);
+
+        GetUserDto getUserDto1 = new GetUserDto();
+        getUserDto1.setId(1L);
+        getUserDto1.setEmail("user1@test.com");
+
+        GetUserDto getUserDto2 = new GetUserDto();
+        getUserDto2.setId(2L);
+        getUserDto2.setEmail("user2@test.com");
+
+        List<GetUserDto> expectedDtos = List.of(getUserDto1, getUserDto2);
+
+        when(createUserMapper.toEntities(dtos)).thenReturn(usersToSave);
+        when(userRepository.findExistingEmails(Set.of("user1@test.com", "user2@test.com")))
+                .thenReturn(List.of());
+        when(userRepository.saveAll(usersToSave)).thenReturn(savedUsers);
+        when(getUserMapper.toDtos(savedUsers)).thenReturn(expectedDtos);
+
+        List<GetUserDto> result = userService.createMultipleUsers(dtos);
+
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertEquals(2, result.size()),
+                () -> assertEquals(1L, result.get(0).getId()),
+                () -> assertEquals("user1@test.com", result.get(0).getEmail()),
+                () -> assertEquals(2L, result.get(1).getId()),
+                () -> assertEquals("user2@test.com", result.get(1).getEmail())
+        );
+
+        verify(createUserMapper, times(1)).toEntities(dtos);
+        verify(userRepository, times(1)).findExistingEmails(any());
+        verify(userRepository, times(1)).saveAll(usersToSave);
+        verify(getUserMapper, times(1)).toDtos(savedUsers);
+    }
+
+    @Test
+    void testCreateMultipleUsersWithDuplicateEmailsInRequest() {
+        CreateUserDto dto1 = new CreateUserDto();
+        dto1.setEmail("duplicate@test.com");
+
+        CreateUserDto dto2 = new CreateUserDto();
+        dto2.setEmail("duplicate@test.com");
+
+        List<CreateUserDto> dtos = List.of(dto1, dto2);
+
+        DuplicateResourceException exception = assertThrows(
+                DuplicateResourceException.class,
+                () -> userService.createMultipleUsers(dtos)
+        );
+
+        assertEquals("Duplicate emails in request", exception.getMessage());
+
+        verify(createUserMapper, never()).toEntities(any());
+        verify(userRepository, never()).findExistingEmails(any());
+        verify(userRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void testCreateMultipleUsersSetsActiveToTrueWhenNull() {
+        CreateUserDto dto1 = new CreateUserDto();
+        dto1.setEmail("user1@test.com");
+        dto1.setActive(null);
+
+        CreateUserDto dto2 = new CreateUserDto();
+        dto2.setEmail("user2@test.com");
+        dto2.setActive(null);
+
+        List<CreateUserDto> dtos = List.of(dto1, dto2);
+
+        User user1 = new User();
+        user1.setEmail("user1@test.com");
+        user1.setActive(null);
+
+        User user2 = new User();
+        user2.setEmail("user2@test.com");
+        user2.setActive(null);
+
+        List<User> usersToSave = List.of(user1, user2);
+
+        User savedUser1 = new User();
+        savedUser1.setId(1L);
+        savedUser1.setEmail("user1@test.com");
+        savedUser1.setActive(true);
+
+        User savedUser2 = new User();
+        savedUser2.setId(2L);
+        savedUser2.setEmail("user2@test.com");
+        savedUser2.setActive(true);
+
+        List<User> savedUsers = List.of(savedUser1, savedUser2);
+
+        GetUserDto getUserDto1 = new GetUserDto();
+        getUserDto1.setId(1L);
+        getUserDto1.setEmail("user1@test.com");
+
+        GetUserDto getUserDto2 = new GetUserDto();
+        getUserDto2.setId(2L);
+        getUserDto2.setEmail("user2@test.com");
+
+        when(createUserMapper.toEntities(dtos)).thenReturn(usersToSave);
+        when(userRepository.findExistingEmails(Set.of("user1@test.com", "user2@test.com")))
+                .thenReturn(List.of());
+        when(userRepository.saveAll(usersToSave)).thenReturn(savedUsers);
+        when(getUserMapper.toDtos(savedUsers)).thenReturn(List.of(getUserDto1, getUserDto2));
+
+        List<GetUserDto> result = userService.createMultipleUsers(dtos);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+        verify(userRepository).saveAll(argThat(users -> {
+            List<User> userList = (List<User>) users;
+            return userList.stream().allMatch(u -> u.getActive() != null && u.getActive());
+        }));
+    }
+
+    @Test
+    void testCreateMultipleUsersWithEmptyList() {
+        List<CreateUserDto> emptyList = List.of();
+
+        when(createUserMapper.toEntities(emptyList)).thenReturn(List.of());
+        when(userRepository.findExistingEmails(Set.of())).thenReturn(List.of());
+        when(userRepository.saveAll(List.of())).thenReturn(List.of());
+        when(getUserMapper.toDtos(List.of())).thenReturn(List.of());
+
+        List<GetUserDto> result = userService.createMultipleUsers(emptyList);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+
+        verify(createUserMapper, times(1)).toEntities(emptyList);
+        verify(userRepository, times(1)).findExistingEmails(Set.of());
+        verify(userRepository, times(1)).saveAll(List.of());
+        verify(getUserMapper, times(1)).toDtos(List.of());
     }
 }

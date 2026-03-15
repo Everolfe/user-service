@@ -7,6 +7,7 @@ import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
 import com.github.everolfe.userservice.dto.paymentcarddto.GetPaymentCardDto;
 import com.github.everolfe.userservice.entity.PaymentCard;
 import com.github.everolfe.userservice.entity.User;
+import com.github.everolfe.userservice.exception.CardsOutOfBoundsException;
 import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCardMapper;
@@ -15,9 +16,11 @@ import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.List;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,15 +37,26 @@ public class PaymentCardService {
     private final CreatePaymentCardMapper createPaymentCardMapper;
 
     @Transactional
+    @CacheEvict(value = "users", key = "#userId")
     public GetPaymentCardDto create(CreatePaymentCardDto createPaymentCardDto, Long userId) {
-        PaymentCard paymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
         if (paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())) {
             throw new DuplicateResourceException(
                     "Card with number " + createPaymentCardDto.getNumber() + " already exists");
         }
-        Optional<User> user = userRepository.findById(userId);
-        paymentCard.setUser(user
-                .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId)));
+        User user = userRepository.findByIdWithPessimisticLock(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId));
+        long activeCardsCount = user.getPaymentCards().stream()
+                .filter(PaymentCard::getActive)
+                .count();
+        if (activeCardsCount >= 5) {
+            throw new CardsOutOfBoundsException("User already has 5 active cards");
+        }
+        PaymentCard paymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
+        paymentCard.setUser(user);
+        if (paymentCard.getActive() == null) {
+            paymentCard.setActive(true);
+        }
+
         PaymentCard savedCard = paymentCardRepository.save(paymentCard);
         return getPaymentCardMapper.toDto(savedCard);
     }
@@ -51,10 +65,10 @@ public class PaymentCardService {
     @Cacheable(value = "cards", key = "#cardId")
     public GetPaymentCardDto getPaymentCardById(Long cardId){
         Optional<PaymentCard> paymentCardOpt = paymentCardRepository.findById(cardId);
-        if (paymentCardOpt.isPresent()) {
-            return getPaymentCardMapper.toDto(paymentCardOpt.get());
-        } else {
+        if (!paymentCardOpt.isPresent()) {
             throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
+        } else {
+            return getPaymentCardMapper.toDto(paymentCardOpt.get());
         }
     }
 
@@ -72,7 +86,7 @@ public class PaymentCardService {
         return paymentCardRepository.findAllCardsByUserId(userId)
                 .stream()
                 .map(getPaymentCardMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -86,25 +100,38 @@ public class PaymentCardService {
     }
 
     @Transactional
-    @CacheEvict(value = "cards", key = "#cardId")
-    public void activateCard(Long cardId){
-        int activated = paymentCardRepository.activateCard(cardId);
-        if(activated == 0){
-            throw new ResourceNotFoundException("No cards with id: " + cardId);
-        }
+    @Caching(evict = {
+            @CacheEvict(value = "cards", key = "#cardId"),
+            @CacheEvict(value = "users", key = "#result.userId")
+    })
+    public GetPaymentCardDto activateCard(Long cardId){
+        PaymentCard card = paymentCardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("No cards with id: " + cardId));
+        card.setActive(true);
+        PaymentCard savedCard = paymentCardRepository.save(card);
+
+        return getPaymentCardMapper.toDto(savedCard);
     }
 
     @Transactional
-    @CacheEvict(value = "cards", key = "#cardId")
-    public void deactivateCard(Long cardId){
-        int deactivated = paymentCardRepository.deactivateCard(cardId);
-        if(deactivated == 0){
-            throw new ResourceNotFoundException("No cards with id: " + cardId);
-        }
+    @Caching(evict = {
+            @CacheEvict(value = "cards", key = "#cardId"),
+            @CacheEvict(value = "users", key = "#result.userId")
+    })
+    public GetPaymentCardDto deactivateCard(Long cardId){
+        PaymentCard card = paymentCardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("No cards with id: " + cardId));
+        card.setActive(false);
+        PaymentCard savedCard = paymentCardRepository.save(card);
+
+        return getPaymentCardMapper.toDto(savedCard);
     }
 
     @Transactional
-    @CachePut(value = "cards", key = "#cardId")
+    @Caching(
+            put = {@CachePut(value = "cards", key = "#cardId")},
+            evict = {@CacheEvict(value = "users", key = "#result.userId")}
+    )
     public GetPaymentCardDto updatePaymentCard(
             Long cardId, CreatePaymentCardDto createPaymentCardDto) {
         PaymentCard paymentCard = paymentCardRepository
@@ -118,7 +145,7 @@ public class PaymentCardService {
         }
         PaymentCard updatedPaymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
         updatedPaymentCard.setId(cardId);
-
+        updatedPaymentCard.setUser(paymentCard.getUser());
         int updatedCount = paymentCardRepository.updateCardDynamic(updatedPaymentCard);
 
         if (updatedCount == 0) {
@@ -129,13 +156,63 @@ public class PaymentCardService {
     }
 
     @Transactional
-    @CacheEvict(value = "cards", key = "#cardId")
-    public void deleteCard(Long cardId){
-        if (!paymentCardRepository.existsById(cardId)) {
-            throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
-        }
-        paymentCardRepository.deleteById(cardId);
+    @Caching(evict = {
+            @CacheEvict(value = "cards", key = "#cardId"),
+            @CacheEvict(value = "users", key = "#result.userId")
+    })
+    public GetPaymentCardDto deleteCard(Long cardId){
+        PaymentCard card = paymentCardRepository
+                .findById(cardId)
+                .orElseThrow(()
+                        -> new ResourceNotFoundException("Payment card not found with id: " + cardId));
+        card.setActive(false);
+        PaymentCard savedCard = paymentCardRepository.save(card);
+        return getPaymentCardMapper.toDto(savedCard);
     }
+
+    @Transactional
+    @CacheEvict(value = "users", key = "#userId")
+    public List<GetPaymentCardDto> createMultiple(List<CreatePaymentCardDto> cardDtos, Long userId) {
+        User user = userRepository.findByIdWithPessimisticLock(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId));
+
+        long existingCards = user.getPaymentCards().stream()
+                .filter(PaymentCard::getActive)
+                .count();
+
+        if (existingCards + cardDtos.size() > 5) {
+            throw new CardsOutOfBoundsException(
+                    String.format("Cannot add %d cards. User already has %d cards (max 5)",
+                            cardDtos.size(), existingCards));
+        }
+
+        Set<String> newNumbers = cardDtos.stream()
+                .map(CreatePaymentCardDto::getNumber)
+                .collect(Collectors.toSet());
+
+        if (newNumbers.size() != cardDtos.size()) {
+            throw new DuplicateResourceException("Duplicate card numbers in request");
+        }
+
+        List<String> existingNumbers = paymentCardRepository.findExistingNumbers(newNumbers);
+        if (!existingNumbers.isEmpty()) {
+            throw new DuplicateResourceException(
+                    "Cards with numbers already exist: " + String.join(", ", existingNumbers));
+        }
+
+        List<PaymentCard> cards = createPaymentCardMapper.toEntities(cardDtos);
+        cards.forEach(card -> {
+            card.setUser(user);
+            if (card.getActive() == null) {
+                card.setActive(true);
+            }
+        });
+
+        List<PaymentCard> savedCards = paymentCardRepository.saveAll(cards);
+        return getPaymentCardMapper.toDtos(savedCards);
+    }
+
+
 
     @Transactional(readOnly = true)
     public boolean existsByNumber(String number) {
