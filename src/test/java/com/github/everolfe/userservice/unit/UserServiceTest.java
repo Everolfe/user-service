@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -53,6 +55,12 @@ class UserServiceTest {
 
     @Mock
     private PaymentCardRepository paymentCardRepository;
+
+    @Mock
+    private CacheManager cacheManager;
+
+    @Mock
+    private Cache cache;
 
     @InjectMocks
     private UserService userService;
@@ -240,7 +248,7 @@ class UserServiceTest {
                 () -> assertEquals(2, result.getTotalElements()),
                 () -> assertEquals(2, result.getContent().size()),
                 () -> assertEquals(1L, result.getContent().getFirst().getId()),
-                () -> assertEquals(2L, result.getContent().getFirst().getId()),
+                () -> assertEquals(2L, result.getContent().get(1).getId()),
                 () -> assertTrue(result.getContent().getFirst().getName()
                         .toLowerCase().contains(searchTerm) ||
                         result.getContent().getFirst().getSurname()
@@ -285,6 +293,7 @@ class UserServiceTest {
         when(userRepository.save(user)).thenReturn(user);
         when(getUserMapper.toDto(user)).thenReturn(dto);
         when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
+        when(cacheManager.getCache(anyString())).thenReturn(cache);
         userService.deactivateUser(1L);
         verify(userRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(user);
@@ -381,6 +390,7 @@ class UserServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
         when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
+        when(cacheManager.getCache("cards")).thenReturn(cache);
         userService.deleteUser(userId);
 
         verify(userRepository, times(1)).findById(userId);
