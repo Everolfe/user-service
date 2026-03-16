@@ -26,6 +26,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.github.everolfe.userservice.dao.UserSpecification.isActive;
+
 @Service
 @AllArgsConstructor
 public class UserService {
@@ -52,6 +54,8 @@ public class UserService {
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
             throw new ResourceNotFoundException("User not found with id" + id);
+        } else if (!user.get().getActive()) {
+            throw new ResourceNotFoundException("User is deactivated");
         } else {
             return getUserMapper.toDto(user.get());
         }
@@ -59,13 +63,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<GetUserDto> getAllUsers(Pageable pageable) {
-        Page<User> users = userRepository.findAll(pageable);
+        Page<User> users = userRepository.findAll(isActive(), pageable);
         return users.map(getUserMapper::toDto);
     }
 
     @Transactional(readOnly = true)
     public Page<GetUserDto> getUsersByNameOrSurname(String name, String surname, Pageable pageable) {
-        Specification<User> spec = UserSpecification.filterByNameAndSurname(name, surname);
+        Specification<User> spec = UserSpecification
+                .filterByNameAndSurname(name, surname)
+                .and(isActive());
         return userRepository.findAll(spec, pageable)
                 .map(getUserMapper::toDto);
     }

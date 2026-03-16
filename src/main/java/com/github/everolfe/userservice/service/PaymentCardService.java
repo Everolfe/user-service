@@ -27,6 +27,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import static com.github.everolfe.userservice.dao.PaymentCardSpecification.isActive;
+
 @Service
 @AllArgsConstructor
 public class PaymentCardService {
@@ -65,8 +67,10 @@ public class PaymentCardService {
     @Cacheable(value = "cards", key = "#cardId")
     public GetPaymentCardDto getPaymentCardById(Long cardId){
         Optional<PaymentCard> paymentCardOpt = paymentCardRepository.findById(cardId);
-        if (!paymentCardOpt.isPresent()) {
+        if (paymentCardOpt.isEmpty()) {
             throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
+        } else if (!paymentCardOpt.get().getActive()) {
+            throw new ResourceNotFoundException("Card is deactivated: " + cardId);
         } else {
             return getPaymentCardMapper.toDto(paymentCardOpt.get());
         }
@@ -74,26 +78,34 @@ public class PaymentCardService {
 
     @Transactional(readOnly = true)
     public Page<GetPaymentCardDto> getAllPaymentCards(Pageable pageable) {
-        Page<PaymentCard> paymentCards = paymentCardRepository.findAll(pageable);
+        Page<PaymentCard> paymentCards = paymentCardRepository.findAll(isActive(),pageable);
         return paymentCards.map(getPaymentCardMapper::toDto);
     }
 
     @Transactional(readOnly = true)
     public List<GetPaymentCardDto> getPaymentCardsByUserId(Long userId) {
-        if (!userRepository.existsById(userId)) {
+        Optional<User> user = userRepository.findById(userId);
+        if (user.isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
-        return paymentCardRepository.findAllCardsByUserId(userId)
-                .stream()
-                .map(getPaymentCardMapper::toDto)
-                .toList();
+        if(user.get().getActive()) {
+            return paymentCardRepository.findAllCardsByUserId(userId)
+                    .stream()
+                    .filter(PaymentCard::getActive)
+                    .map(getPaymentCardMapper::toDto)
+                    .toList();
+        }else {
+            throw new ResourceNotFoundException("User is deactivated");
+        }
+
     }
 
     @Transactional(readOnly = true)
     public Page<GetPaymentCardDto> searchCardsByUserNameAndSurname(
             String name, String surname, Pageable pageable) {
 
-        Specification<PaymentCard> spec = PaymentCardSpecification.byUserNameAndSurname(name, surname);
+        Specification<PaymentCard> spec = PaymentCardSpecification
+                .byUserNameAndSurname(name, surname).and(isActive());
 
         return paymentCardRepository.findAll(spec, pageable)
                 .map(getPaymentCardMapper::toDto);

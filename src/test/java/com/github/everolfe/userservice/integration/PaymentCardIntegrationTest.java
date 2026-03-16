@@ -333,8 +333,7 @@ class PaymentCardIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .get(BASE_PATH + "/{id}", cardId)
                 .then()
-                .statusCode(HttpStatus.OK.value())
-                .body("active", is(false));
+                .statusCode(HttpStatus.NOT_FOUND.value());
 
         given()
                 .when()

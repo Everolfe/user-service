@@ -15,6 +15,10 @@ public class PaymentCardSpecification {
 
     private PaymentCardSpecification() {}
 
+    public static Specification<PaymentCard> isActive() {
+        return ((root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("active")));
+    }
+
     public static Specification<PaymentCard> byUserNameAndSurname(String name, String surname) {
         return (root, query, criteriaBuilder) -> {
             Join<PaymentCard, User> userJoin = root.join("user");

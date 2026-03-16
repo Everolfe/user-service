@@ -13,6 +13,10 @@ public class UserSpecification {
 
     private UserSpecification() {}
 
+    public static Specification<User> isActive() {
+        return ((root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("active")));
+    }
+
     public static Specification<User> filterByNameAndSurname(String name, String surname) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = Stream.of(

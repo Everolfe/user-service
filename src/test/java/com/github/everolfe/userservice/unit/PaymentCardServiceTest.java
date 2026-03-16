@@ -26,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import static com.github.everolfe.userservice.dao.PaymentCardSpecification.isActive;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -143,7 +144,7 @@ public class PaymentCardServiceTest {
 
         Page<PaymentCard> page = new PageImpl<>(List.of(paymentCardEntity));
 
-        when(paymentCardRepository.findAll(pageable)).thenReturn(page);
+        when(paymentCardRepository.findAll(isActive(),pageable)).thenReturn(page);
 
         Page<GetPaymentCardDto> result = paymentCardService.getAllPaymentCards(pageable);
 
@@ -167,7 +168,7 @@ public class PaymentCardServiceTest {
 
         List<PaymentCard> userCards = List.of(paymentCardEntity);
 
-        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(paymentCardRepository.findAllCardsByUserId(1L)).thenReturn(userCards);
         when(getPaymentCardMapper.toDto(paymentCardEntity)).thenReturn(getPaymentCardDto);
 

@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import static com.github.everolfe.userservice.dao.UserSpecification.isActive;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -130,7 +131,7 @@ class UserServiceTest {
 
         Page<User> page = new PageImpl<>(List.of(user));
 
-        when(userRepository.findAll(pageable)).thenReturn(page);
+        when(userRepository.findAll(isActive(),pageable)).thenReturn(page);
 
         Page<GetUserDto> result = userService.getAllUsers(pageable);
 
