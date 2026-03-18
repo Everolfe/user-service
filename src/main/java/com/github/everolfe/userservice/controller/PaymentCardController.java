@@ -70,7 +70,7 @@ public class PaymentCardController {
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
-    @PatchMapping("{id}/deactivate")
+    @PatchMapping("/{id}/deactivate")
     public ResponseEntity<GetPaymentCardDto> deactivate(@PathVariable Long id) {
         GetPaymentCardDto result = paymentCardService.deactivateCard(id);
         return new ResponseEntity<>(result, HttpStatus.OK);
