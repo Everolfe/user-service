@@ -1,6 +1,6 @@
 package com.github.everolfe.userservice.integration;
 
-import java.time.Duration;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -10,6 +10,9 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import java.time.Duration;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -59,5 +62,19 @@ public class BaseIntegrationTest {
         registry.add("spring.cache.type", () -> "redis");
 
         registry.add("spring.liquibase.enabled", () -> "false");
+    }
+    @Test
+    void testPostgresContainerIsRunning() {
+        assertThat(postgres.isRunning()).isTrue();
+        assertThat(postgres.getJdbcUrl()).isNotEmpty();
+        assertThat(postgres.getUsername()).isEqualTo("test");
+        assertThat(postgres.getPassword()).isEqualTo("test");
+    }
+
+    @Test
+    void testRedisContainerIsRunning() {
+        assertThat(redis.isRunning()).isTrue();
+        assertThat(redis.getMappedPort(6379)).isPositive();
+        assertThat(redis.getHost()).isNotEmpty();
     }
 }
