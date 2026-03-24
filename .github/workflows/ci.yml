@@ -41,7 +41,6 @@ jobs:
       - name: Configure Testcontainers
         run: |
           echo "TESTCONTAINERS_RYUK_DISABLED=true" >> $GITHUB_ENV
-          # Для ускорения тестов
           echo "TESTCONTAINERS_REUSE_ENABLE=true" >> $GITHUB_ENV
 
       - name: Build and Test with Maven
