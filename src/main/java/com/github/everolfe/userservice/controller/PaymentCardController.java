@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @AllArgsConstructor
@@ -21,6 +22,7 @@ public class PaymentCardController {
     private final PaymentCardService paymentCardService;
 
     @PostMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isOwner(#userId)")
     public ResponseEntity<GetPaymentCardDto> create(@PathVariable Long userId,
                                                     @Valid @RequestBody CreatePaymentCardDto paymentCardDto) {
         GetPaymentCardDto createdCard = paymentCardService.create(paymentCardDto, userId);
@@ -28,6 +30,7 @@ public class PaymentCardController {
     }
 
     @PostMapping("/user/{userId}/batch")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isOwner(#userId)")
     public ResponseEntity<List<GetPaymentCardDto>> createMultiple(
             @PathVariable Long userId,
             @Valid @RequestBody List<CreatePaymentCardDto> paymentCardDtos) {
@@ -37,6 +40,7 @@ public class PaymentCardController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isCardOwner(#id)")
     public ResponseEntity<GetPaymentCardDto> get(@PathVariable Long id) {
         GetPaymentCardDto card = paymentCardService.getPaymentCardById(id);
         return new ResponseEntity<>(card, HttpStatus.OK);
@@ -49,12 +53,14 @@ public class PaymentCardController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<GetPaymentCardDto>> getUserPaymentCards(@PathVariable Long userId) {
         List<GetPaymentCardDto> userCards = paymentCardService.getPaymentCardsByUserId(userId);
         return new ResponseEntity<>(userCards, HttpStatus.OK);
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<GetPaymentCardDto>> searchCardsByUserNameOrSurname(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String surname,
@@ -65,18 +71,21 @@ public class PaymentCardController {
     }
 
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GetPaymentCardDto> activate(@PathVariable Long id) {
         GetPaymentCardDto result = paymentCardService.activateCard(id);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GetPaymentCardDto> deactivate(@PathVariable Long id) {
         GetPaymentCardDto result = paymentCardService.deactivateCard(id);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isCardOwner(#id)")
     public ResponseEntity<GetPaymentCardDto> updateCard(
             @PathVariable Long id,
             @Valid @RequestBody CreatePaymentCardDto paymentCardDto){
@@ -85,18 +94,21 @@ public class PaymentCardController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isCardOwner(#id)")
     public ResponseEntity<GetPaymentCardDto> delete(@PathVariable Long id) {
         GetPaymentCardDto result = paymentCardService.deleteCard(id);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @GetMapping("/exists/{number}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> existsByNumber(@PathVariable String number) {
         boolean exists = paymentCardService.existsByNumber(number);
         return new ResponseEntity<>(exists,HttpStatus.OK);
     }
 
     @GetMapping("/user/{userId}/can-add")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isOwner(#userId)")
     public ResponseEntity<Boolean> canAddCardToUser(@PathVariable Long userId) {
         boolean canAdd = paymentCardService.canAddCardToUser(userId);
         return new ResponseEntity<>(canAdd,HttpStatus.OK);

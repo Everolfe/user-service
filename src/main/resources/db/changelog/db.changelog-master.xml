@@ -7,5 +7,6 @@
 
     <include file="/db/changelog/v1.0/20260306_init_tables.xml"/>
     <include file="/db/changelog/v1.0/20260306_add_indexes.xml"/>
+    <include file="/db/changelog/v1.0/20260324_add_column_to_user.xml"/>
 
 </databaseChangeLog>

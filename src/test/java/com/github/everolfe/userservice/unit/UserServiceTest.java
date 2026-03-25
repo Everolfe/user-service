@@ -26,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static com.github.everolfe.userservice.dao.UserSpecification.isActive;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -67,6 +68,7 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateUserSuccess() {
         CreateUserDto createUserDto = new CreateUserDto();
         createUserDto.setEmail("testNew@test.com");
@@ -94,6 +96,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateUserWithExistingEmail() {
         CreateUserDto  createUserDto = new CreateUserDto();
         createUserDto.setEmail("email");
@@ -102,6 +105,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUserByIdSuccess() {
         Long userId = 1L;
         User user = new User();
@@ -119,12 +123,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUserByIdWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.getUserById(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetAllUsersSuccess() {
         Pageable pageable = Pageable.unpaged();
         User user = new User();
@@ -141,6 +147,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUsersByNameOrSurnameSuccess(){
         String name = "John";
         String surname = "Doe";
@@ -199,6 +206,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testSearchUsersOnlyByNameOrSurnameSuccess(){
         String searchTerm = "john";
         Pageable pageable = Pageable.unpaged();
@@ -266,6 +274,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
@@ -280,12 +289,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class, () ->
                 userService.activateUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
@@ -302,12 +313,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.deactivateUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserSuccess() {
         Long userId = 1L;
         String newEmail = "new.email@example.com";
@@ -362,6 +375,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithIncorrectId() {
         CreateUserDto createUserDto = new CreateUserDto();
         assertThrows(ResourceNotFoundException.class,
@@ -369,6 +383,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithExistingEmail() {
         Long userId = 1L;
         CreateUserDto createUserDto = new CreateUserDto();
@@ -385,6 +400,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeleteUserSuccess() {
         Long userId = 1L;
         User user = new User();
@@ -399,12 +415,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeleteUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
                 ()-> userService.deleteUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddMoreCardsSuccess(){
         Long userId = 1L;
         User user = new User();
@@ -425,12 +443,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddMoreCardsWithIncorrectId(){
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.canAddMoreCards(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetCardCountByUserIdSuccess(){
         Long userId = 1L;
         User user = new User();
@@ -452,12 +472,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetCardCountByUserIdWithIncorrectId(){
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.getCardCountByUserId(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersSuccess() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("user1@test.com");
@@ -524,6 +546,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersWithDuplicateEmailsInRequest() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("duplicate@test.com");
@@ -546,6 +569,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersSetsActiveToTrueWhenNull() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("user1@test.com");
@@ -605,6 +629,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersWithEmptyList() {
         List<CreateUserDto> emptyList = List.of();
 
