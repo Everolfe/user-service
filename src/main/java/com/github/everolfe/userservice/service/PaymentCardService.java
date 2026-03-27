@@ -1,250 +1,150 @@
 package com.github.everolfe.userservice.service;
 
-import com.github.everolfe.userservice.dao.PaymentCardRepository;
-import com.github.everolfe.userservice.dao.PaymentCardSpecification;
-import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
 import com.github.everolfe.userservice.dto.paymentcarddto.GetPaymentCardDto;
-import com.github.everolfe.userservice.entity.PaymentCard;
-import com.github.everolfe.userservice.entity.User;
 import com.github.everolfe.userservice.exception.CardsOutOfBoundsException;
 import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
-import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCardMapper;
-import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMapper;
-import java.util.stream.Collectors;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.Optional;
 import java.util.List;
-import java.util.Set;
-import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
 
-import static com.github.everolfe.userservice.dao.PaymentCardSpecification.isActive;
+/**
+ * Service interface for managing payment cards.
+ * Provides operations for creating, retrieving, updating, and deleting payment cards,
+ * as well as managing card activation status and user-card relationships.
+ */
+public interface PaymentCardService {
 
-@Service
-@AllArgsConstructor
-public class PaymentCardService {
+    /**
+     * Creates a new payment card for the specified user.
+     *
+     * @param createPaymentCardDto the DTO containing card creation data
+     * @param userId the ID of the user to associate the card with
+     * @return the DTO of the created payment card
+     * @throws DuplicateResourceException if a card with the same number already exists
+     * @throws ResourceNotFoundException if the user is not found
+     * @throws CardsOutOfBoundsException if the user already has 5 active cards
+     */
+    GetPaymentCardDto create(
+            CreatePaymentCardDto createPaymentCardDto, Long userId
+    );
 
-    private final PaymentCardRepository paymentCardRepository;
-    private final UserRepository userRepository;
-    private final GetPaymentCardMapper getPaymentCardMapper;
-    private final CreatePaymentCardMapper createPaymentCardMapper;
+    /**
+     * Retrieves a payment card by its ID.
+     *
+     * @param cardId the ID of the payment card
+     * @return the DTO of the payment card
+     * @throws ResourceNotFoundException if the card is not found or is deactivated
+     */
+    GetPaymentCardDto getPaymentCardById(Long cardId);
 
-    @Transactional
-    @CacheEvict(value = "users", key = "#userId")
-    public GetPaymentCardDto create(CreatePaymentCardDto createPaymentCardDto, Long userId) {
-        if (paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())) {
-            throw new DuplicateResourceException(
-                    "Card with number " + createPaymentCardDto.getNumber() + " already exists");
-        }
-        User user = userRepository.findByIdWithPessimisticLock(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId));
-        long activeCardsCount = user.getPaymentCards().stream()
-                .filter(PaymentCard::getActive)
-                .count();
-        if (activeCardsCount >= 5) {
-            throw new CardsOutOfBoundsException("User already has 5 active cards");
-        }
-        PaymentCard paymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
-        paymentCard.setUser(user);
-        if (paymentCard.getActive() == null) {
-            paymentCard.setActive(true);
-        }
+    /**
+     * Retrieves all active payment cards with pagination.
+     *
+     * @param pageable pagination information
+     * @return a page of payment card DTOs
+     */
+    Page<GetPaymentCardDto> getAllPaymentCards(Pageable pageable);
 
-        PaymentCard savedCard = paymentCardRepository.save(paymentCard);
-        return getPaymentCardMapper.toDto(savedCard);
-    }
+    /**
+     * Retrieves all active payment cards associated with a specific user.
+     *
+     * @param userId the ID of the user
+     * @return a list of payment card DTOs for the user
+     * @throws ResourceNotFoundException if the user is not found or is deactivated
+     */
+    List<GetPaymentCardDto> getPaymentCardsByUserId(Long userId);
 
-    @Transactional(readOnly = true)
-    @Cacheable(value = "cards", key = "#cardId")
-    public GetPaymentCardDto getPaymentCardById(Long cardId){
-        Optional<PaymentCard> paymentCardOpt = paymentCardRepository.findById(cardId);
-        if (paymentCardOpt.isEmpty()) {
-            throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
-        } else if (!paymentCardOpt.get().getActive()) {
-            throw new ResourceNotFoundException("Card is deactivated: " + cardId);
-        } else {
-            return getPaymentCardMapper.toDto(paymentCardOpt.get());
-        }
-    }
+    /**
+     * Searches for active payment cards by the cardholder's name and surname.
+     *
+     * @param username the first name of the cardholder
+     * @param surname the last name of the cardholder
+     * @param pageable pagination information
+     * @return a page of payment card DTOs matching the search criteria
+     */
+    Page<GetPaymentCardDto> searchCardsByUserNameAndSurname(
+            String username, String surname, Pageable pageable
+    );
 
-    @Transactional(readOnly = true)
-    public Page<GetPaymentCardDto> getAllPaymentCards(Pageable pageable) {
-        Page<PaymentCard> paymentCards = paymentCardRepository.findAll(isActive(),pageable);
-        return paymentCards.map(getPaymentCardMapper::toDto);
-    }
+    /**
+     * Activates a payment card.
+     *
+     * @param cardId the ID of the payment card to activate
+     * @return the DTO of the activated payment card
+     * @throws ResourceNotFoundException if the card is not found
+     */
+    GetPaymentCardDto activateCard(Long cardId);
 
-    @Transactional(readOnly = true)
-    public List<GetPaymentCardDto> getPaymentCardsByUserId(Long userId) {
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isEmpty()) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
-        }
-        if(user.get().getActive()) {
-            return paymentCardRepository.findAllCardsByUserId(userId)
-                    .stream()
-                    .filter(PaymentCard::getActive)
-                    .map(getPaymentCardMapper::toDto)
-                    .toList();
-        }else {
-            throw new ResourceNotFoundException("User is deactivated");
-        }
+    /**
+     * Deactivates a payment card.
+     *
+     * @param cardId the ID of the payment card to deactivate
+     * @return the DTO of the deactivated payment card
+     * @throws ResourceNotFoundException if the card is not found
+     */
+    GetPaymentCardDto deactivateCard(Long cardId);
 
-    }
+    /**
+     * Updates an existing payment card with new data.
+     *
+     * @param cardId the ID of the payment card to update
+     * @param createPaymentCardDto the DTO containing updated card data
+     * @return the DTO of the updated payment card
+     * @throws ResourceNotFoundException if the card is not found
+     * @throws DuplicateResourceException if the new card number already exists
+     */
+    GetPaymentCardDto updatePaymentCard(
+            Long cardId, CreatePaymentCardDto createPaymentCardDto
+    );
 
-    @Transactional(readOnly = true)
-    public Page<GetPaymentCardDto> searchCardsByUserNameAndSurname(
-            String name, String surname, Pageable pageable) {
+    /**
+     * Soft deletes a payment card by deactivating it.
+     *
+     * @param cardId the ID of the payment card to delete
+     * @return the DTO of the deactivated payment card
+     * @throws ResourceNotFoundException if the card is not found
+     */
+    GetPaymentCardDto deleteCard(Long cardId);
 
-        Specification<PaymentCard> spec = PaymentCardSpecification
-                .byUserNameAndSurname(name, surname).and(isActive());
+    /**
+     * Creates multiple payment cards for a user in a batch operation.
+     *
+     * @param cardDtos the list of DTOs containing card creation data
+     * @param userId the ID of the user to associate the cards with
+     * @return a list of DTOs of the created payment cards
+     * @throws ResourceNotFoundException if the user is not found
+     * @throws DuplicateResourceException if duplicate card numbers exist in request or database
+     * @throws CardsOutOfBoundsException if adding the cards would exceed the 5 active card limit
+     */
+    List<GetPaymentCardDto> createMultiple(
+            List<CreatePaymentCardDto> cardDtos, Long userId
+    );
 
-        return paymentCardRepository.findAll(spec, pageable)
-                .map(getPaymentCardMapper::toDto);
-    }
+    /**
+     * Checks if a payment card with the given number already exists.
+     *
+     * @param number the card number to check
+     * @return true if a card with the number exists, false otherwise
+     */
+    boolean existsByNumber(String number);
 
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "cards", key = "#cardId"),
-            @CacheEvict(value = "users", key = "#result.userId")
-    })
-    public GetPaymentCardDto activateCard(Long cardId){
-        PaymentCard card = paymentCardRepository.findById(cardId)
-                .orElseThrow(() -> new ResourceNotFoundException("No cards with id: " + cardId));
-        card.setActive(true);
-        PaymentCard savedCard = paymentCardRepository.save(card);
+    /**
+     * Checks if a user can add more active payment cards (maximum 5).
+     *
+     * @param userId the ID of the user
+     * @return true if the user can add more cards, false otherwise
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    boolean canAddCardToUser(Long userId);
 
-        return getPaymentCardMapper.toDto(savedCard);
-    }
-
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "cards", key = "#cardId"),
-            @CacheEvict(value = "users", key = "#result.userId")
-    })
-    public GetPaymentCardDto deactivateCard(Long cardId){
-        PaymentCard card = paymentCardRepository.findById(cardId)
-                .orElseThrow(() -> new ResourceNotFoundException("No cards with id: " + cardId));
-        card.setActive(false);
-        PaymentCard savedCard = paymentCardRepository.save(card);
-
-        return getPaymentCardMapper.toDto(savedCard);
-    }
-
-    @Transactional
-    @Caching(
-            put = {@CachePut(value = "cards", key = "#cardId")},
-            evict = {@CacheEvict(value = "users", key = "#result.userId")}
-    )
-    public GetPaymentCardDto updatePaymentCard(
-            Long cardId, CreatePaymentCardDto createPaymentCardDto) {
-        PaymentCard paymentCard = paymentCardRepository
-                .findById(cardId).orElseThrow(() -> new ResourceNotFoundException("No card with id: " + cardId));
-
-        if (createPaymentCardDto.getNumber() != null &&
-                !createPaymentCardDto.getNumber().equals(paymentCard.getNumber()) &&
-                paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())) {
-            throw new DuplicateResourceException(
-                    "Card with number " + createPaymentCardDto.getNumber() + " already exists");
-        }
-        PaymentCard updatedPaymentCard = createPaymentCardMapper.toEntity(createPaymentCardDto);
-        updatedPaymentCard.setId(cardId);
-        updatedPaymentCard.setUser(paymentCard.getUser());
-        int updatedCount = paymentCardRepository.updateCardDynamic(updatedPaymentCard);
-
-        if (updatedCount == 0) {
-            throw new ResourceNotFoundException("Failed to update payment card with id: " + cardId);
-        }
-
-        return getPaymentCardMapper.toDto(updatedPaymentCard);
-    }
-
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "cards", key = "#cardId"),
-            @CacheEvict(value = "users", key = "#result.userId")
-    })
-    public GetPaymentCardDto deleteCard(Long cardId){
-        PaymentCard card = paymentCardRepository
-                .findById(cardId)
-                .orElseThrow(()
-                        -> new ResourceNotFoundException("Payment card not found with id: " + cardId));
-        card.setActive(false);
-        PaymentCard savedCard = paymentCardRepository.save(card);
-        return getPaymentCardMapper.toDto(savedCard);
-    }
-
-    @Transactional
-    @CacheEvict(value = "users", key = "#userId")
-    public List<GetPaymentCardDto> createMultiple(List<CreatePaymentCardDto> cardDtos, Long userId) {
-        User user = userRepository.findByIdWithPessimisticLock(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("No User with id" + userId));
-
-        long existingCards = user.getPaymentCards().stream()
-                .filter(PaymentCard::getActive)
-                .count();
-
-        if (existingCards + cardDtos.size() > 5) {
-            throw new CardsOutOfBoundsException(
-                    String.format("Cannot add %d cards. User already has %d cards (max 5)",
-                            cardDtos.size(), existingCards));
-        }
-
-        Set<String> newNumbers = cardDtos.stream()
-                .map(CreatePaymentCardDto::getNumber)
-                .collect(Collectors.toSet());
-
-        if (newNumbers.size() != cardDtos.size()) {
-            throw new DuplicateResourceException("Duplicate card numbers in request");
-        }
-
-        List<String> existingNumbers = paymentCardRepository.findExistingNumbers(newNumbers);
-        if (!existingNumbers.isEmpty()) {
-            throw new DuplicateResourceException(
-                    "Cards with numbers already exist: " + String.join(", ", existingNumbers));
-        }
-
-        List<PaymentCard> cards = createPaymentCardMapper.toEntities(cardDtos);
-        cards.forEach(card -> {
-            card.setUser(user);
-            if (card.getActive() == null) {
-                card.setActive(true);
-            }
-        });
-
-        List<PaymentCard> savedCards = paymentCardRepository.saveAll(cards);
-        return getPaymentCardMapper.toDtos(savedCards);
-    }
-
-
-
-    @Transactional(readOnly = true)
-    public boolean existsByNumber(String number) {
-        return paymentCardRepository.existsByNumber(number);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean canAddCardToUser(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
-        }
-        return paymentCardRepository.canAddCardToUser(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public int countCardsByUserId(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
-        }
-        return paymentCardRepository.countCardsByUserId(userId);
-    }
-
+    /**
+     * Counts the number of payment cards associated with a user.
+     *
+     * @param userId the ID of the user
+     * @return the number of cards for the user
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    int countCardsByUserId(Long userId);
 }
