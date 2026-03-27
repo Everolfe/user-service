@@ -19,7 +19,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @RequiredArgsConstructor
 @EnableMethodSecurity(prePostEnabled = true)
-@Profile("local")
+@Profile({"local", "docker"})
 public class SecurityConfig {
 
     @Bean
