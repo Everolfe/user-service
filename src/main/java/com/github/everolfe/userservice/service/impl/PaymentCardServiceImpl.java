@@ -72,7 +72,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         Optional<PaymentCard> paymentCardOpt = paymentCardRepository.findById(cardId);
         if (paymentCardOpt.isEmpty()) {
             throw new ResourceNotFoundException("Payment card not found with id: " + cardId);
-        } else if (!paymentCardOpt.get().getActive()) {
+        } else if (!paymentCardOpt.get().isActive()) {
             throw new ResourceNotFoundException("Card is deactivated: " + cardId);
         } else {
             return getPaymentCardMapper.toDto(paymentCardOpt.get());
