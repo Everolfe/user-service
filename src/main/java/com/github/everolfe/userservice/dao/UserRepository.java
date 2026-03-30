@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -48,4 +49,8 @@ public interface UserRepository extends JpaRepository<User, Long>,
 
     @Query("SELECT u.email FROM User u WHERE u.email IN :emails")
     List<String> findExistingEmails(@Param("emails") Set<String> emails);
+
+    Optional<User> findBySub(UUID sub);
+
+    boolean existsBySub(UUID sub);
 }

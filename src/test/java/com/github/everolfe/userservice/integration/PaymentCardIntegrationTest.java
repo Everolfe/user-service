@@ -6,8 +6,10 @@ import com.github.everolfe.userservice.dto.paymentcarddto.CreatePaymentCardDto;
 import com.github.everolfe.userservice.dto.paymentcarddto.GetPaymentCardDto;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
+import com.github.everolfe.userservice.integration.config.TestSecurityConfig;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
@@ -30,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Import(TestSecurityConfig.class)
 class PaymentCardIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_PATH = "/api/cards";
@@ -72,6 +76,7 @@ class PaymentCardIntegrationTest extends BaseIntegrationTest {
         userDto.setEmail("test.user." + System.currentTimeMillis() + "@example.com");
         userDto.setBirthDate(LocalDate.of(1990, 1, 1));
         userDto.setActive(true);
+        userDto.setSub(UUID.fromString(UUID.randomUUID().toString()));
 
         return given()
                 .contentType(ContentType.JSON)
@@ -652,7 +657,7 @@ class PaymentCardIntegrationTest extends BaseIntegrationTest {
         userDto.setEmail(email);
         userDto.setBirthDate(LocalDate.of(1990, 1, 1));
         userDto.setActive(true);
-
+        userDto.setSub(UUID.fromString(UUID.randomUUID().toString()));
         return given()
                 .contentType(ContentType.JSON)
                 .body(userDto)

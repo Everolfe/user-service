@@ -10,7 +10,7 @@ import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.mapper.usermapper.CreateUserMapper;
 import com.github.everolfe.userservice.mapper.usermapper.GetUserMapper;
-import com.github.everolfe.userservice.service.UserService;
+import com.github.everolfe.userservice.service.impl.UserServiceImpl;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static com.github.everolfe.userservice.dao.UserSpecification.isActive;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -64,9 +65,10 @@ class UserServiceTest {
     private Cache cache;
 
     @InjectMocks
-    private UserService userService;
+    private UserServiceImpl userServiceImpl;
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateUserSuccess() {
         CreateUserDto createUserDto = new CreateUserDto();
         createUserDto.setEmail("testNew@test.com");
@@ -82,7 +84,7 @@ class UserServiceTest {
         when(userRepository.save(userToSave)).thenReturn(savedUser);
         when(getUserMapper.toDto(savedUser)).thenReturn(getUserDto);
 
-        GetUserDto result = userService.createUser(createUserDto);
+        GetUserDto result = userServiceImpl.createUser(createUserDto);
 
         assertNotNull(result);
         assertEquals(savedUser.getEmail(), result.getEmail());
@@ -94,14 +96,16 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateUserWithExistingEmail() {
         CreateUserDto  createUserDto = new CreateUserDto();
         createUserDto.setEmail("email");
         when(userRepository.existsByEmail(createUserDto.getEmail())).thenReturn(true);
-        assertThrows(DuplicateResourceException.class, () -> userService.createUser(createUserDto));
+        assertThrows(DuplicateResourceException.class, () -> userServiceImpl.createUser(createUserDto));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUserByIdSuccess() {
         Long userId = 1L;
         User user = new User();
@@ -112,19 +116,21 @@ class UserServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(getUserMapper.toDto(user)).thenReturn(getUserDto);
 
-        GetUserDto result = userService.getUserById(userId);
+        GetUserDto result = userServiceImpl.getUserById(userId);
 
         assertNotNull(result);
         assertEquals(userId, result.getId());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUserByIdWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.getUserById(1L));
+                () -> userServiceImpl.getUserById(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetAllUsersSuccess() {
         Pageable pageable = Pageable.unpaged();
         User user = new User();
@@ -133,7 +139,7 @@ class UserServiceTest {
 
         when(userRepository.findAll(isActive(),pageable)).thenReturn(page);
 
-        Page<GetUserDto> result = userService.getAllUsers(pageable);
+        Page<GetUserDto> result = userServiceImpl.getAllUsers(pageable);
 
         assertNotNull(result);
         assertEquals(page.getTotalElements(), result.getTotalElements());
@@ -141,6 +147,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetUsersByNameOrSurnameSuccess(){
         String name = "John";
         String surname = "Doe";
@@ -177,7 +184,7 @@ class UserServiceTest {
         when(getUserMapper.toDto(user1)).thenReturn(dto1);
         when(getUserMapper.toDto(user2)).thenReturn(dto2);
 
-        Page<GetUserDto> result = userService.getUsersByNameOrSurname(name, surname, pageable);
+        Page<GetUserDto> result = userServiceImpl.getUsersByNameOrSurname(name, surname, pageable);
 
 
         assertAll(
@@ -199,6 +206,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testSearchUsersOnlyByNameOrSurnameSuccess(){
         String searchTerm = "john";
         Pageable pageable = Pageable.unpaged();
@@ -242,7 +250,7 @@ class UserServiceTest {
         when(getUserMapper.toDto(user1)).thenReturn(dto1);
         when(getUserMapper.toDto(user2)).thenReturn(dto2);
 
-        Page<GetUserDto> result = userService.searchUsersOnlyByNameOrSurname(searchTerm, pageable);
+        Page<GetUserDto> result = userServiceImpl.searchUsersOnlyByNameOrSurname(searchTerm, pageable);
 
         assertAll(
                 () -> assertNotNull(result),
@@ -266,6 +274,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
@@ -273,19 +282,21 @@ class UserServiceTest {
                 .thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
         when(getUserMapper.toDto(user)).thenReturn(dto);
-        userService.activateUser(1L);
+        userServiceImpl.activateUser(1L);
         verify(userRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(user);
         verify(getUserMapper, times(1)).toDto(user);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class, () ->
-                userService.activateUser(1L));
+                userServiceImpl.activateUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateUserSuccess() {
         User user = new User();
         GetUserDto dto = new GetUserDto();
@@ -295,19 +306,21 @@ class UserServiceTest {
         when(getUserMapper.toDto(user)).thenReturn(dto);
         when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
         when(cacheManager.getCache(anyString())).thenReturn(cache);
-        userService.deactivateUser(1L);
+        userServiceImpl.deactivateUser(1L);
         verify(userRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(user);
         verify(getUserMapper, times(1)).toDto(user);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.deactivateUser(1L));
+                () -> userServiceImpl.deactivateUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserSuccess() {
         Long userId = 1L;
         String newEmail = "new.email@example.com";
@@ -344,7 +357,7 @@ class UserServiceTest {
         when(createUserMapper.toEntity(updateDto)).thenReturn(updatedUser);
         when(userRepository.updateUserDynamic(updatedUser)).thenReturn(1);
         when(getUserMapper.toDto(updatedUser)).thenReturn(expectedDto);
-        GetUserDto result = userService.updateUser(userId, updateDto);
+        GetUserDto result = userServiceImpl.updateUser(userId, updateDto);
 
         assertAll(
                 () -> assertNotNull(result),
@@ -362,13 +375,15 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithIncorrectId() {
         CreateUserDto createUserDto = new CreateUserDto();
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.updateUser(1L, createUserDto));
+                () -> userServiceImpl.updateUser(1L, createUserDto));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithExistingEmail() {
         Long userId = 1L;
         CreateUserDto createUserDto = new CreateUserDto();
@@ -378,13 +393,14 @@ class UserServiceTest {
         when(userRepository.existsByEmail(createUserDto.getEmail())).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class,
-                () -> userService.updateUser(userId, createUserDto));
+                () -> userServiceImpl.updateUser(userId, createUserDto));
 
         verify(userRepository, times(1)).existsByEmail(createUserDto.getEmail());
         verify(userRepository, times(1)).existsByEmail(any());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeleteUserSuccess() {
         Long userId = 1L;
         User user = new User();
@@ -392,19 +408,21 @@ class UserServiceTest {
         when(userRepository.save(user)).thenReturn(user);
         when(paymentCardRepository.deactivateAllCardsByUserId(1L)).thenReturn(1);
         when(cacheManager.getCache("cards")).thenReturn(cache);
-        userService.deleteUser(userId);
+        userServiceImpl.deleteUser(userId);
 
         verify(userRepository, times(1)).findById(userId);
         verify(userRepository, times(1)).save(user);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeleteUserWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                ()-> userService.deleteUser(1L));
+                ()-> userServiceImpl.deleteUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddMoreCardsSuccess(){
         Long userId = 1L;
         User user = new User();
@@ -417,7 +435,7 @@ class UserServiceTest {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(userRepository.canAddMoreCards(userId)).thenReturn(true);
 
-        boolean result = userService.canAddMoreCards(userId);
+        boolean result = userServiceImpl.canAddMoreCards(userId);
         assertTrue(result);
 
         verify(userRepository, times(1)).canAddMoreCards(userId);
@@ -425,12 +443,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddMoreCardsWithIncorrectId(){
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.canAddMoreCards(1L));
+                () -> userServiceImpl.canAddMoreCards(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetCardCountByUserIdSuccess(){
         Long userId = 1L;
         User user = new User();
@@ -443,7 +463,7 @@ class UserServiceTest {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(userRepository.getCardCountByUserId(userId)).thenReturn(user.getPaymentCards().size());
 
-        int result = userService.getCardCountByUserId(userId);
+        int result = userServiceImpl.getCardCountByUserId(userId);
 
         assertEquals(2, result);
 
@@ -452,12 +472,14 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetCardCountByUserIdWithIncorrectId(){
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.getCardCountByUserId(1L));
+                () -> userServiceImpl.getCardCountByUserId(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersSuccess() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("user1@test.com");
@@ -506,7 +528,7 @@ class UserServiceTest {
         when(userRepository.saveAll(usersToSave)).thenReturn(savedUsers);
         when(getUserMapper.toDtos(savedUsers)).thenReturn(expectedDtos);
 
-        List<GetUserDto> result = userService.createMultipleUsers(dtos);
+        List<GetUserDto> result = userServiceImpl.createMultipleUsers(dtos);
 
         assertAll(
                 () -> assertNotNull(result),
@@ -524,6 +546,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersWithDuplicateEmailsInRequest() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("duplicate@test.com");
@@ -535,7 +558,7 @@ class UserServiceTest {
 
         DuplicateResourceException exception = assertThrows(
                 DuplicateResourceException.class,
-                () -> userService.createMultipleUsers(dtos)
+                () -> userServiceImpl.createMultipleUsers(dtos)
         );
 
         assertEquals("Duplicate emails in request", exception.getMessage());
@@ -546,6 +569,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersSetsActiveToTrueWhenNull() {
         CreateUserDto dto1 = new CreateUserDto();
         dto1.setEmail("user1@test.com");
@@ -593,7 +617,7 @@ class UserServiceTest {
         when(userRepository.saveAll(usersToSave)).thenReturn(savedUsers);
         when(getUserMapper.toDtos(savedUsers)).thenReturn(List.of(getUserDto1, getUserDto2));
 
-        List<GetUserDto> result = userService.createMultipleUsers(dtos);
+        List<GetUserDto> result = userServiceImpl.createMultipleUsers(dtos);
 
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -605,6 +629,7 @@ class UserServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleUsersWithEmptyList() {
         List<CreateUserDto> emptyList = List.of();
 
@@ -613,7 +638,7 @@ class UserServiceTest {
         when(userRepository.saveAll(List.of())).thenReturn(List.of());
         when(getUserMapper.toDtos(List.of())).thenReturn(List.of());
 
-        List<GetUserDto> result = userService.createMultipleUsers(emptyList);
+        List<GetUserDto> result = userServiceImpl.createMultipleUsers(emptyList);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());

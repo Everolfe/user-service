@@ -1,206 +1,126 @@
 package com.github.everolfe.userservice.service;
 
-import com.github.everolfe.userservice.dao.PaymentCardRepository;
-import com.github.everolfe.userservice.dao.UserRepository;
-import com.github.everolfe.userservice.dao.UserSpecification;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
-import com.github.everolfe.userservice.entity.User;
 import com.github.everolfe.userservice.exception.DuplicateResourceException;
 import com.github.everolfe.userservice.exception.ResourceNotFoundException;
-import com.github.everolfe.userservice.mapper.usermapper.CreateUserMapper;
-import com.github.everolfe.userservice.mapper.usermapper.GetUserMapper;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import static com.github.everolfe.userservice.dao.UserSpecification.isActive;
+/**
+ * Service interface for managing users.
+ * Provides operations for creating, retrieving, updating, and deleting users,
+ * as well as managing user activation status and card limits.
+ */
+public interface UserService {
 
-@Service
-@AllArgsConstructor
-public class UserService {
-    private final UserRepository userRepository;
-    private final CreateUserMapper createUserMapper;
-    private final GetUserMapper getUserMapper;
-    private final PaymentCardRepository paymentCardRepository;
-    private final CacheManager cacheManager;
+    /**
+     * Creates a new user.
+     *
+     * @param createUserDto the DTO containing user creation data
+     * @return the DTO of the created user
+     * @throws DuplicateResourceException if a user with the same email already exists
+     */
+    GetUserDto createUser(CreateUserDto createUserDto);
 
-    @Transactional
-    public GetUserDto createUser(CreateUserDto createUserDto) {
-        if (userRepository.existsByEmail(createUserDto.getEmail())) {
-            throw new DuplicateResourceException(
-                    "User with email " + createUserDto.getEmail() + " already exists");
-        }
-        User user = createUserMapper.toEntity(createUserDto);
-        User savedUser = userRepository.save(user);
-        return getUserMapper.toDto(savedUser);
-    }
+    /**
+     * Retrieves a user by their ID.
+     *
+     * @param id the ID of the user
+     * @return the DTO of the user
+     * @throws ResourceNotFoundException if the user is not found or is deactivated
+     */
+    GetUserDto getUserById(Long id);
 
-    @Transactional(readOnly = true)
-    @Cacheable(value = "users", key = "#id")
-    public GetUserDto getUserById(Long id) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isEmpty()) {
-            throw new ResourceNotFoundException("User not found with id" + id);
-        } else if (!user.get().getActive()) {
-            throw new ResourceNotFoundException("User is deactivated");
-        } else {
-            return getUserMapper.toDto(user.get());
-        }
-    }
+    /**
+     * Retrieves all active users with pagination.
+     *
+     * @param pageable pagination information
+     * @return a page of user DTOs
+     */
+    Page<GetUserDto> getAllUsers(Pageable pageable);
 
-    @Transactional(readOnly = true)
-    public Page<GetUserDto> getAllUsers(Pageable pageable) {
-        Page<User> users = userRepository.findAll(isActive(), pageable);
-        return users.map(getUserMapper::toDto);
-    }
+    /**
+     * Searches for active users by name or surname.
+     *
+     * @param name the first name to search for
+     * @param surname the last name to search for
+     * @param pageable pagination information
+     * @return a page of user DTOs matching the search criteria
+     */
+    Page<GetUserDto> getUsersByNameOrSurname(String name, String surname, Pageable pageable);
 
-    @Transactional(readOnly = true)
-    public Page<GetUserDto> getUsersByNameOrSurname(String name, String surname, Pageable pageable) {
-        Specification<User> spec = UserSpecification
-                .filterByNameAndSurname(name, surname)
-                .and(isActive());
-        return userRepository.findAll(spec, pageable)
-                .map(getUserMapper::toDto);
-    }
+    /**
+     * Searches for active users by a search term that matches either name or surname.
+     *
+     * @param searchTerm the term to search for in name or surname
+     * @param pageable pagination information
+     * @return a page of user DTOs matching the search criteria
+     */
+    Page<GetUserDto> searchUsersOnlyByNameOrSurname(String searchTerm, Pageable pageable);
 
-    @Transactional(readOnly = true)
-    public Page<GetUserDto> searchUsersOnlyByNameOrSurname(String searchTerm, Pageable pageable) {
-        return userRepository.findByNameContainingIgnoreCaseOrSurnameContainingIgnoreCase(
-                        searchTerm, searchTerm, pageable)
-                .map(getUserMapper::toDto);
-    }
+    /**
+     * Activates a user.
+     *
+     * @param id the ID of the user to activate
+     * @return the DTO of the activated user
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    GetUserDto activateUser(Long id);
 
-    @Transactional
-    @CachePut(value = "users", key = "#id")
-    public GetUserDto activateUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        user.setActive(true);
-        userRepository.save(user);
-        return getUserMapper.toDto(user);
-    }
+    /**
+     * Deactivates a user and automatically deactivates all their associated payment cards.
+     *
+     * @param id the ID of the user to deactivate
+     * @return the DTO of the deactivated user
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    GetUserDto deactivateUser(Long id);
 
-    @Transactional
-    @CachePut(value = "users", key = "#id")
-    public GetUserDto  deactivateUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        user.setActive(false);
-        userRepository.save(user);
-        deactivateUserCards(id);
-        return getUserMapper.toDto(user);
-    }
+    /**
+     * Updates an existing user with new data.
+     *
+     * @param id the ID of the user to update
+     * @param createUserDto the DTO containing updated user data
+     * @return the DTO of the updated user
+     * @throws ResourceNotFoundException if the user is not found
+     * @throws DuplicateResourceException if the new email already exists
+     */
+    GetUserDto updateUser(Long id, CreateUserDto createUserDto);
 
-    @Transactional
-    @CachePut(value = "users", key = "#id")
-    public GetUserDto updateUser(Long id, CreateUserDto createUserDto) {
-        User user = userRepository
-                .findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
+    /**
+     * Soft deletes a user by deactivating them and all their associated payment cards.
+     *
+     * @param id the ID of the user to delete
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    void deleteUser(Long id);
 
-        if (createUserDto.getEmail() != null &&
-                !createUserDto.getEmail().equals(user.getEmail()) &&
-                userRepository.existsByEmail(createUserDto.getEmail())) {
-            throw new DuplicateResourceException(
-                    "User with email " + createUserDto.getEmail() + " already exists");
-        }
+    /**
+     * Creates multiple users in a batch operation.
+     *
+     * @param createUserDtos the list of DTOs containing user creation data
+     * @return a list of DTOs of the created users
+     * @throws DuplicateResourceException if duplicate emails exist in request or database
+     */
+    List<GetUserDto> createMultipleUsers(List<CreateUserDto> createUserDtos);
 
-        boolean isDeactivating = Boolean.TRUE.equals(user.getActive()) &&
-                Boolean.FALSE.equals(createUserDto.getActive());
+    /**
+     * Checks if a user can add more active payment cards (maximum 5).
+     *
+     * @param userId the ID of the user
+     * @return true if the user can add more cards, false otherwise
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    boolean canAddMoreCards(Long userId);
 
-        User updatedUser = createUserMapper.toEntity(createUserDto);
-        updatedUser.setId(id);
-
-        int updatedCount = userRepository.updateUserDynamic(updatedUser);
-        if (updatedCount == 0) {
-            throw new ResourceNotFoundException("Failed to update user with id" + id);
-        }
-
-        if (isDeactivating) {
-            deactivateUserCards(id);
-        }
-
-        return getUserMapper.toDto(updatedUser);
-    }
-
-    @Transactional
-    @CacheEvict(value = "users", key = "#id")
-    public void deleteUser(Long id) {
-        User user = userRepository
-                .findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
-        user.setActive(false);
-        userRepository.save(user);
-        deactivateUserCards(id);
-    }
-
-    @Transactional
-    public List<GetUserDto> createMultipleUsers(List<CreateUserDto> createUserDtos) {
-        Set<String> emailsInRequest = createUserDtos.stream()
-                .map(CreateUserDto::getEmail)
-                .collect(Collectors.toSet());
-
-        if (emailsInRequest.size() != createUserDtos.size()) {
-            throw new DuplicateResourceException("Duplicate emails in request");
-        }
-
-        List<String> existingEmails = userRepository.findExistingEmails(emailsInRequest);
-        if (!existingEmails.isEmpty()) {
-            throw new DuplicateResourceException(
-                    "Users with emails already exist: " + String.join(", ", existingEmails));
-        }
-
-        List<User> users = createUserMapper.toEntities(createUserDtos);
-
-        users.forEach(user -> {
-            if (user.getActive() == null) {
-                user.setActive(true);
-            }
-        });
-
-        List<User> savedUsers = userRepository.saveAll(users);
-
-        return getUserMapper.toDtos(savedUsers);
-    }
-
-
-    @Transactional(readOnly = true)
-    public boolean canAddMoreCards(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
-        }
-        return userRepository.canAddMoreCards(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public int getCardCountByUserId(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
-        }
-        return userRepository.getCardCountByUserId(userId);
-    }
-
-    private void deactivateUserCards(Long userId) {
-        paymentCardRepository.deactivateAllCardsByUserId(userId);
-
-        Cache cardsCache = cacheManager.getCache("cards");
-        if (cardsCache != null) {
-            List<Long> cardIds = paymentCardRepository.findCardIdsByUserId(userId);
-            cardIds.forEach(cardsCache::evict);
-        }
-    }
-
+    /**
+     * Gets the count of payment cards associated with a user.
+     *
+     * @param userId the ID of the user
+     * @return the number of cards for the user
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    int getCardCountByUserId(Long userId);
 }

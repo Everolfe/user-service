@@ -3,15 +3,18 @@ package com.github.everolfe.userservice.integration;
 import com.github.everolfe.userservice.dao.UserRepository;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
+import com.github.everolfe.userservice.integration.config.TestSecurityConfig;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.util.Objects;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
@@ -23,7 +26,9 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Import(TestSecurityConfig.class)
 class UserIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_PATH = "/api/users";
@@ -357,6 +362,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         updateDto.setEmail("new@example.com");
         updateDto.setBirthDate(LocalDate.of(1995, 5, 5));
         updateDto.setActive(true);
+        updateDto.setSub(UUID.fromString(UUID.randomUUID().toString()));
 
         given()
                 .contentType(ContentType.JSON)
@@ -383,7 +389,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         updateDto.setBirthDate(LocalDate.of(1990, 1, 1));
         updateDto.setActive(true);
         updateDto.setEmail("second@example.com");
-
+        updateDto.setSub(UUID.fromString(UUID.randomUUID().toString()));
         given()
                 .contentType(ContentType.JSON)
                 .body(updateDto)
@@ -515,7 +521,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         updateDto.setEmail(uniqueEmail);
         updateDto.setBirthDate(LocalDate.of(1990, 1, 1));
         updateDto.setActive(true);
-
+        updateDto.setSub(UUID.fromString(UUID.randomUUID().toString()));
         GetUserDto updatedUser = given()
                 .contentType(ContentType.JSON)
                 .body(updateDto)
@@ -549,8 +555,6 @@ class UserIntegrationTest extends BaseIntegrationTest {
 
     }
 
-
-
     private CreateUserDto createUserDto(String email, String name, String surname) {
         CreateUserDto dto = new CreateUserDto();
         dto.setName(name);
@@ -558,6 +562,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         dto.setEmail(email);
         dto.setBirthDate(LocalDate.of(1990, 1, 1));
         dto.setActive(true);
+        dto.setSub(UUID.fromString(UUID.randomUUID().toString()));
         return dto;
     }
 

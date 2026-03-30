@@ -12,7 +12,7 @@ import com.github.everolfe.userservice.exception.ResourceNotFoundException;
 import com.github.everolfe.userservice.exception.CardsOutOfBoundsException;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.CreatePaymentCardMapper;
 import com.github.everolfe.userservice.mapper.paymentcardmapper.GetPaymentCardMapper;
-import com.github.everolfe.userservice.service.PaymentCardService;
+import com.github.everolfe.userservice.service.impl.PaymentCardServiceImpl;
 import java.util.List;
 import java.util.Set;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static com.github.everolfe.userservice.dao.PaymentCardSpecification.isActive;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -57,9 +58,10 @@ class PaymentCardServiceTest {
     private CreatePaymentCardMapper createPaymentCardMapper;
 
     @InjectMocks
-    private PaymentCardService paymentCardService;
+    private PaymentCardServiceImpl paymentCardServiceImpl;
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreatePaymentCardSuccess() {
         Long userId = 1L;
         CreatePaymentCardDto createPaymentCardDto = new CreatePaymentCardDto();
@@ -81,7 +83,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.save(cardToSave)).thenReturn(savedCard);
         when(getPaymentCardMapper.toDto(savedCard)).thenReturn(getPaymentCardDto);
 
-        GetPaymentCardDto result = paymentCardService.create(createPaymentCardDto,userId);
+        GetPaymentCardDto result = paymentCardServiceImpl.create(createPaymentCardDto,userId);
 
         assertNotNull(result);
         assertEquals(1L, result.getUserId());
@@ -91,6 +93,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreatePaymentCardWithoutUserId() {
         Long userID = 99L;
         CreatePaymentCardDto createPaymentCardDto = new CreatePaymentCardDto();
@@ -99,22 +102,24 @@ class PaymentCardServiceTest {
         when(userRepository.findByIdWithPessimisticLock(userID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.create(createPaymentCardDto,userID));
+                () -> paymentCardServiceImpl.create(createPaymentCardDto,userID));
 
         verify(paymentCardRepository,never()).save(any());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateCardWithExistingNumber(){
         CreatePaymentCardDto createPaymentCardDto = new CreatePaymentCardDto();
         createPaymentCardDto.setNumber("1234567890");
         when(paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class,
-                () -> paymentCardService.create(createPaymentCardDto,1L));
+                () -> paymentCardServiceImpl.create(createPaymentCardDto,1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetPaymentCardByIdSuccess() {
         PaymentCard cardEntity = new PaymentCard();
         cardEntity.setId(10L);
@@ -124,20 +129,22 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.findById(10L)).thenReturn(Optional.of(cardEntity));
         when(getPaymentCardMapper.toDto(cardEntity)).thenReturn(getPaymentCardDto);
 
-        GetPaymentCardDto result = paymentCardService.getPaymentCardById(10L);
+        GetPaymentCardDto result = paymentCardServiceImpl.getPaymentCardById(10L);
 
         assertNotNull(result);
         assertEquals(10L, result.getId());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetPaymentCardByIdWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.getPaymentCardById(10L));
+                () -> paymentCardServiceImpl.getPaymentCardById(10L));
     }
 
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testGetAllPaymentCardSuccess() {
         Pageable pageable = Pageable.unpaged();
         PaymentCard paymentCardEntity = new PaymentCard();
@@ -146,7 +153,7 @@ class PaymentCardServiceTest {
 
         when(paymentCardRepository.findAll(isActive(),pageable)).thenReturn(page);
 
-        Page<GetPaymentCardDto> result = paymentCardService.getAllPaymentCards(pageable);
+        Page<GetPaymentCardDto> result = paymentCardServiceImpl.getAllPaymentCards(pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -154,6 +161,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testPaymentCardWithUserIdSuccess() {
         PaymentCard paymentCardEntity = new PaymentCard();
         paymentCardEntity.setId(10L);
@@ -172,19 +180,21 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.findAllCardsByUserId(1L)).thenReturn(userCards);
         when(getPaymentCardMapper.toDto(paymentCardEntity)).thenReturn(getPaymentCardDto);
 
-        List<GetPaymentCardDto> result = paymentCardService.getPaymentCardsByUserId(1L);
+        List<GetPaymentCardDto> result = paymentCardServiceImpl.getPaymentCardsByUserId(1L);
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals(10L, result.getFirst().getId());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testPaymentCardWithIncorrectUserId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.getPaymentCardsByUserId(990L));
+                () -> paymentCardServiceImpl.getPaymentCardsByUserId(990L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testSearchCardsByUserNameAndSurname() {
         String name = "John";
         String surname = "Doe";
@@ -223,7 +233,7 @@ class PaymentCardServiceTest {
                 .thenReturn(cardPage);
         when(getPaymentCardMapper.toDto(card1)).thenReturn(dto1);
         when(getPaymentCardMapper.toDto(card2)).thenReturn(dto2);
-        Page<GetPaymentCardDto> result = paymentCardService
+        Page<GetPaymentCardDto> result = paymentCardServiceImpl
                 .searchCardsByUserNameAndSurname(name, surname, pageable);
         assertAll(
                 () -> assertNotNull(result),
@@ -242,37 +252,42 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateCardSuccess() {
         PaymentCard card = new PaymentCard();
         when(paymentCardRepository.findById(10L)).thenReturn(Optional.of(card));
         when(paymentCardRepository.save(card)).thenReturn(card);
-        paymentCardService.activateCard(10L);
+        paymentCardServiceImpl.activateCard(10L);
         verify(paymentCardRepository,times(1)).findById(10L);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testActivateCardWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.activateCard(10L));
+                () -> paymentCardServiceImpl.activateCard(10L));
     }
 
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateCardSuccess() {
         PaymentCard card = new PaymentCard();
         when(paymentCardRepository.findById(10L)).thenReturn(Optional.of(card));
         when(paymentCardRepository.save(card)).thenReturn(card);
-        paymentCardService.deactivateCard(10L);
+        paymentCardServiceImpl.deactivateCard(10L);
         verify(paymentCardRepository,times(1)).findById(10L);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeactivateCardWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.deactivateCard(10L));
+                () -> paymentCardServiceImpl.deactivateCard(10L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdatePaymentCardSuccess() {
         Long cardId = 10L;
         String newNumber = "9999888877776666";
@@ -306,7 +321,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.updateCardDynamic(updatedCard)).thenReturn(1);
         when(getPaymentCardMapper.toDto(updatedCard)).thenReturn(expectedDto);
 
-        GetPaymentCardDto result = paymentCardService.updatePaymentCard(cardId, updateDto);
+        GetPaymentCardDto result = paymentCardServiceImpl.updatePaymentCard(cardId, updateDto);
         assertAll(
                 () -> assertNotNull(result),
                 () -> assertEquals(cardId, result.getId()),
@@ -321,14 +336,16 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdatePaymentCardWithIncorrectId() {
         CreatePaymentCardDto createPaymentCardDto = new CreatePaymentCardDto();
 
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.updatePaymentCard(10L, createPaymentCardDto));
+                () -> paymentCardServiceImpl.updatePaymentCard(10L, createPaymentCardDto));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testUpdatePaymentCardWithExistingFields() {
         CreatePaymentCardDto createPaymentCardDto = new CreatePaymentCardDto();
         createPaymentCardDto.setNumber("123456789");
@@ -338,30 +355,33 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.existsByNumber(createPaymentCardDto.getNumber())).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class,
-                () -> paymentCardService.updatePaymentCard(10L,createPaymentCardDto));
+                () -> paymentCardServiceImpl.updatePaymentCard(10L,createPaymentCardDto));
 
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeletePaymentCardSuccess() {
         PaymentCard card = new PaymentCard();
         when(paymentCardRepository.findById(10L)).thenReturn(Optional.of(card));
         when(paymentCardRepository.save(card)).thenReturn(card);
-        paymentCardService.deleteCard(10L);
+        paymentCardServiceImpl.deleteCard(10L);
         verify(paymentCardRepository,times(1)).save(card);
         verify(paymentCardRepository,times(1)).findById(10L);
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeletePaymentCardWithIncorrectId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.deleteCard(10L));
+                () -> paymentCardServiceImpl.deleteCard(10L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testExistByNumberSuccess() {
         when(paymentCardRepository.existsByNumber("123")).thenReturn(true);
-        boolean result = paymentCardService.existsByNumber("123");
+        boolean result = paymentCardServiceImpl.existsByNumber("123");
 
         assertTrue(result);
 
@@ -369,6 +389,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddPaymentCardSuccess() {
         Long userId = 1L;
 
@@ -378,7 +399,7 @@ class PaymentCardServiceTest {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(paymentCardRepository.canAddCardToUser(userId)).thenReturn(true);
 
-        boolean result = paymentCardService.canAddCardToUser(userId);
+        boolean result = paymentCardServiceImpl.canAddCardToUser(userId);
 
         assertTrue(result);
 
@@ -387,12 +408,14 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCanAddPaymentCardWithIncorrectUserId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.canAddCardToUser(1L));
+                () -> paymentCardServiceImpl.canAddCardToUser(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCountCardsByUserIdSuccess() {
         Long userId = 1L;
 
@@ -401,7 +424,7 @@ class PaymentCardServiceTest {
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(paymentCardRepository.countCardsByUserId(userId)).thenReturn(1);
-        int result = paymentCardService.countCardsByUserId(userId);
+        int result = paymentCardServiceImpl.countCardsByUserId(userId);
 
         assertEquals(1, result);
 
@@ -410,12 +433,14 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCountCardsByUserIdWithIncorrectUserId() {
         assertThrows(ResourceNotFoundException.class,
-                () -> paymentCardService.countCardsByUserId(1L));
+                () -> paymentCardServiceImpl.countCardsByUserId(1L));
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsSuccess() {
         Long userId = 1L;
 
@@ -475,10 +500,8 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.saveAll(cardsToSave)).thenReturn(savedCards);
         when(getPaymentCardMapper.toDtos(savedCards)).thenReturn(expectedDtos);
 
-        // Выполнение
-        List<GetPaymentCardDto> result = paymentCardService.createMultiple(dtos, userId);
+        List<GetPaymentCardDto> result = paymentCardServiceImpl.createMultiple(dtos, userId);
 
-        // Проверка
         assertAll(
                 () -> assertNotNull(result),
                 () -> assertEquals(2, result.size()),
@@ -499,16 +522,14 @@ class PaymentCardServiceTest {
 
     @Test
     void testCreateMultipleCardsUserNotFound() {
-        // Подготовка
         Long userId = 99L;
         List<CreatePaymentCardDto> dtos = List.of(new CreatePaymentCardDto());
 
         when(userRepository.findByIdWithPessimisticLock(userId)).thenReturn(Optional.empty());
 
-        // Выполнение и проверка
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> paymentCardService.createMultiple(dtos, userId)
+                () -> paymentCardServiceImpl.createMultiple(dtos, userId)
         );
 
         assertEquals("No User with id" + userId, exception.getMessage());
@@ -519,14 +540,13 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsExceedsLimit() {
-        // Подготовка
         Long userId = 1L;
 
         User user = new User();
         user.setId(userId);
 
-        // У пользователя уже есть 4 активные карты
         PaymentCard existingCard1 = new PaymentCard();
         existingCard1.setActive(true);
         PaymentCard existingCard2 = new PaymentCard();
@@ -538,7 +558,6 @@ class PaymentCardServiceTest {
 
         user.setPaymentCards(List.of(existingCard1, existingCard2, existingCard3, existingCard4));
 
-        // Пытаемся добавить еще 2 карты (будет 6 > 5)
         CreatePaymentCardDto dto1 = new CreatePaymentCardDto();
         CreatePaymentCardDto dto2 = new CreatePaymentCardDto();
         List<CreatePaymentCardDto> dtos = List.of(dto1, dto2);
@@ -547,7 +566,7 @@ class PaymentCardServiceTest {
 
         CardsOutOfBoundsException exception = assertThrows(
                 CardsOutOfBoundsException.class,
-                () -> paymentCardService.createMultiple(dtos, userId)
+                () -> paymentCardServiceImpl.createMultiple(dtos, userId)
         );
 
         assertTrue(exception.getMessage().contains("Cannot add 2 cards"));
@@ -559,6 +578,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsWithDuplicateNumbersInRequest() {
 
         Long userId = 1L;
@@ -580,7 +600,7 @@ class PaymentCardServiceTest {
 
         DuplicateResourceException exception = assertThrows(
                 DuplicateResourceException.class,
-                () -> paymentCardService.createMultiple(dtos, userId)
+                () -> paymentCardServiceImpl.createMultiple(dtos, userId)
         );
 
         assertEquals("Duplicate card numbers in request", exception.getMessage());
@@ -591,6 +611,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsWithExistingNumbersInDatabase() {
         Long userId = 1L;
 
@@ -614,7 +635,7 @@ class PaymentCardServiceTest {
 
         DuplicateResourceException exception = assertThrows(
                 DuplicateResourceException.class,
-                () -> paymentCardService.createMultiple(dtos, userId)
+                () -> paymentCardServiceImpl.createMultiple(dtos, userId)
         );
 
         assertTrue(exception.getMessage().contains("Cards with numbers already exist"));
@@ -626,6 +647,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsSetsActiveToTrueWhenNull() {
         Long userId = 1L;
 
@@ -674,7 +696,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.saveAll(cardsToSave)).thenReturn(savedCards);
         when(getPaymentCardMapper.toDtos(savedCards)).thenReturn(List.of(new GetPaymentCardDto(), new GetPaymentCardDto()));
 
-        paymentCardService.createMultiple(dtos, userId);
+        paymentCardServiceImpl.createMultiple(dtos, userId);
 
         verify(paymentCardRepository).saveAll(argThat(cards -> {
             List<PaymentCard> cardList = (List<PaymentCard>) cards;
@@ -683,6 +705,7 @@ class PaymentCardServiceTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testCreateMultipleCardsWithEmptyList() {
         Long userId = 1L;
         List<CreatePaymentCardDto> emptyList = List.of();
@@ -697,7 +720,7 @@ class PaymentCardServiceTest {
         when(paymentCardRepository.saveAll(List.of())).thenReturn(List.of());
         when(getPaymentCardMapper.toDtos(List.of())).thenReturn(List.of());
 
-        List<GetPaymentCardDto> result = paymentCardService.createMultiple(emptyList, userId);
+        List<GetPaymentCardDto> result = paymentCardServiceImpl.createMultiple(emptyList, userId);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
