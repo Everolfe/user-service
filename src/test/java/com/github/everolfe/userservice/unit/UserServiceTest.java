@@ -648,4 +648,63 @@ class UserServiceTest {
         verify(userRepository, times(1)).saveAll(List.of());
         verify(getUserMapper, times(1)).toDtos(List.of());
     }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByEmail_success()
+    {
+        User user = new User();
+        user.setEmail("user@test.com");
+
+        GetUserDto userDto = new GetUserDto();
+        userDto.setEmail("user@test.com");
+
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
+        when(getUserMapper.toDto(any())).thenReturn(userDto);
+
+        userServiceImpl.getUserByEmail("user@test.com");
+
+        assertEquals("user@test.com", userDto.getEmail());
+
+        verify(userRepository, times(1)).findByEmail(anyString());
+        verify(getUserMapper, times(1)).toDto(any());
+    }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByEmail_withInvalidEmail_throwsException() {
+        assertThrows(RuntimeException.class, () -> userServiceImpl.getUserByEmail("user@test.com"));
+    }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByIds_success(){
+        Pageable pageable = Pageable.unpaged();
+        List<Long> ids = List.of(1L, 2L, 3L);
+        User user1 = new User();
+        user1.setId(1L);
+        User user2 = new User();
+        user2.setId(2L);
+
+        Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, 2);
+        GetUserDto dto1 = new GetUserDto();
+        dto1.setId(1L);
+        GetUserDto dto2 = new GetUserDto();
+        dto2.setId(2L);
+
+        when(userRepository.findAllById(ids, pageable)).thenReturn(userPage);
+        when(getUserMapper.toDto(user1)).thenReturn(dto1);
+        when(getUserMapper.toDto(user2)).thenReturn(dto2);
+        Page<GetUserDto> result = userServiceImpl.getUserByIds(ids, pageable);
+
+        assertNotNull(result);
+        assertEquals(2, result.getContent().size());
+        assertEquals(1L, result.getContent().get(0).getId());
+        assertEquals(2L, result.getContent().get(1).getId());
+
+        verify(userRepository, times(1)).findAllById(ids, pageable);
+        verify(getUserMapper, times(1)).toDto(user1);
+        verify(getUserMapper, times(1)).toDto(user2);
+
+    }
 }
