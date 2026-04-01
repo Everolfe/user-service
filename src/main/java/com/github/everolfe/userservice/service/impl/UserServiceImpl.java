@@ -93,10 +93,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "users", key = "#id"),
-            @CacheEvict(value = "users_by_email", allEntries = true)
-    })
+    @CachePut(value = "users", key = "#id")
     public GetUserDto activateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -107,10 +104,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(value = "users", key = "#id"),
-        @CacheEvict(value = "users_by_email", allEntries = true)
-    })
+    @CachePut(value = "users", key = "#id")
     public GetUserDto  deactivateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -122,13 +116,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @Caching(evict = @CacheEvict(value = "users_by_email", allEntries = true),
-            put = @CachePut(value = "users", key = "#id")
-    )
+    @CachePut(value = "users", key = "#id")
     public GetUserDto updateUser(Long id, CreateUserDto createUserDto) {
         User user = userRepository
                 .findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("No user with id: " + id));
 
         if (createUserDto.getEmail() != null &&
                 !createUserDto.getEmail().equals(user.getEmail()) &&
@@ -148,21 +140,17 @@ public class UserServiceImpl implements UserService {
             throw new ResourceNotFoundException("Failed to update user with id: " + id);
         }
 
-        User updatedUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found after update: " + id));
-
         if (isDeactivating) {
             deactivateUserCards(id);
         }
 
-        return getUserMapper.toDto(updatedUser);
+        return getUserMapper.toDto(userToUpdate);
     }
 
     @Override
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "users", key = "#id"),
-            @CacheEvict(value = "users_by_email", allEntries = true),
             @CacheEvict(value = "cards", allEntries = true)
     })
     public void deleteUser(Long id) {
@@ -231,7 +219,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(key = "#email", value = "users_by_email")
     @Transactional(readOnly = true)
     public GetUserDto getUserByEmail(String email) {
         User user = userRepository
