@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
             throw new ResourceNotFoundException("User not found with id" + id);
-        } else if (!user.get().getActive()) {
+        } else if (Boolean.FALSE.equals(user.get().getActive())) {
             throw new ResourceNotFoundException("User is deactivated");
         } else {
             return getUserMapper.toDto(user.get());

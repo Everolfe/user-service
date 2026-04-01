@@ -4,7 +4,6 @@ package com.github.everolfe.userservice.controller;
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
 import com.github.everolfe.userservice.service.UserService;
-import com.github.everolfe.userservice.service.impl.UserServiceImpl;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.AllArgsConstructor;
