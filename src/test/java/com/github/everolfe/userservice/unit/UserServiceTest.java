@@ -371,7 +371,7 @@ class UserServiceTest {
                 () -> assertEquals(newSurname, result.getSurname())
         );
 
-        verify(userRepository, times(2)).findById(userId);
+        verify(userRepository, times(1)).findById(userId);
         verify(userRepository, times(1)).existsByEmail(newEmail);
         verify(createUserMapper, times(1)).toEntity(updateDto);
         verify(userRepository, times(1)).updateUserDynamic(any(User.class));
