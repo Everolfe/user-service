@@ -21,6 +21,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -77,7 +78,8 @@ public class UserServiceImpl implements UserService {
         Specification<User> spec = UserSpecification
                 .filterByNameAndSurname(name, surname)
                 .and(isActive());
-        return userRepository.findAll(spec, pageable)
+        return userRepository
+                .findAll(spec, pageable)
                 .map(getUserMapper::toDto);
     }
 
@@ -91,7 +93,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @CachePut(value = "users", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "users", key = "#id"),
+            @CacheEvict(value = "users_by_email", allEntries = true)
+    })
     public GetUserDto activateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -102,7 +107,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @CachePut(value = "users", key = "#id")
+    @Caching(evict = {
+        @CacheEvict(value = "users", key = "#id"),
+        @CacheEvict(value = "users_by_email", allEntries = true)
+    })
     public GetUserDto  deactivateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -114,7 +122,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @CachePut(value = "users", key = "#id")
+    @Caching(evict = @CacheEvict(value = "users_by_email", allEntries = true),
+            put = @CachePut(value = "users", key = "#id")
+    )
     public GetUserDto updateUser(Long id, CreateUserDto createUserDto) {
         User user = userRepository
                 .findById(id)
@@ -130,13 +140,16 @@ public class UserServiceImpl implements UserService {
         boolean isDeactivating = Boolean.TRUE.equals(user.getActive()) &&
                 Boolean.FALSE.equals(createUserDto.getActive());
 
-        User updatedUser = createUserMapper.toEntity(createUserDto);
-        updatedUser.setId(id);
+        User userToUpdate = createUserMapper.toEntity(createUserDto);
+        userToUpdate.setId(id);
 
-        int updatedCount = userRepository.updateUserDynamic(updatedUser);
+        int updatedCount = userRepository.updateUserDynamic(userToUpdate);
         if (updatedCount == 0) {
-            throw new ResourceNotFoundException("Failed to update user with id" + id);
+            throw new ResourceNotFoundException("Failed to update user with id: " + id);
         }
+
+        User updatedUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found after update: " + id));
 
         if (isDeactivating) {
             deactivateUserCards(id);
@@ -147,7 +160,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "users", key = "#id"),
+            @CacheEvict(value = "users_by_email", allEntries = true),
+            @CacheEvict(value = "cards", allEntries = true)
+    })
     public void deleteUser(Long id) {
         User user = userRepository
                 .findById(id)
@@ -214,13 +231,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(key = "#email", value = "users")
+    @Cacheable(key = "#email", value = "users_by_email")
     @Transactional(readOnly = true)
     public GetUserDto getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository
+                .findByEmail(email)
+                .filter(u -> u.getActive() == Boolean.TRUE)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         return getUserMapper.toDto(user);
     }
+
 
     private void deactivateUserCards(Long userId) {
         paymentCardRepository.deactivateAllCardsByUserId(userId);

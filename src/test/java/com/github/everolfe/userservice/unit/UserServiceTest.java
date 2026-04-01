@@ -352,11 +352,15 @@ class UserServiceTest {
         expectedDto.setName(newName);
         expectedDto.setSurname(newSurname);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById(userId))
+                .thenReturn(Optional.of(existingUser))
+                .thenReturn(Optional.of(updatedUser));
+
         when(userRepository.existsByEmail(newEmail)).thenReturn(false);
         when(createUserMapper.toEntity(updateDto)).thenReturn(updatedUser);
-        when(userRepository.updateUserDynamic(updatedUser)).thenReturn(1);
+        when(userRepository.updateUserDynamic(any(User.class))).thenReturn(1);
         when(getUserMapper.toDto(updatedUser)).thenReturn(expectedDto);
+
         GetUserDto result = userServiceImpl.updateUser(userId, updateDto);
 
         assertAll(
@@ -367,13 +371,12 @@ class UserServiceTest {
                 () -> assertEquals(newSurname, result.getSurname())
         );
 
-        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(2)).findById(userId);
         verify(userRepository, times(1)).existsByEmail(newEmail);
         verify(createUserMapper, times(1)).toEntity(updateDto);
-        verify(userRepository, times(1)).updateUserDynamic(updatedUser);
+        verify(userRepository, times(1)).updateUserDynamic(any(User.class));
         verify(getUserMapper, times(1)).toDto(updatedUser);
     }
-
     @Test
     @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithIncorrectId() {

@@ -25,6 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long>,
             "u.surname = COALESCE(:#{#user.surname}, u.surname), " +
             "u.birthDate = COALESCE(:#{#user.birthDate}, u.birthDate), " +
             "u.email = COALESCE(:#{#user.email}, u.email), " +
+            "u.active = COALESCE(:#{#user.active}, u.active), " +
             "u.updatedAt = CURRENT_TIMESTAMP " +
             "WHERE u.id = :#{#user.id}")
     int updateUserDynamic(@Param("user") User user);
