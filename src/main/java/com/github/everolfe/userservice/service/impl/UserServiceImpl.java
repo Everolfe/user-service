@@ -206,6 +206,22 @@ public class UserServiceImpl implements UserService {
         return userRepository.getCardCountByUserId(userId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<GetUserDto> getUserByIds(List<Long> ids, Pageable pageable) {
+        Page<User> existingUsers = userRepository.findAllById(ids, pageable);
+        return existingUsers.map(getUserMapper::toDto);
+    }
+
+    @Override
+    @Cacheable(key = "#email", value = "users")
+    @Transactional(readOnly = true)
+    public GetUserDto getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return getUserMapper.toDto(user);
+    }
+
     private void deactivateUserCards(Long userId) {
         paymentCardRepository.deactivateAllCardsByUserId(userId);
 

@@ -123,4 +123,8 @@ public interface UserService {
      * @throws ResourceNotFoundException if the user is not found
      */
     int getCardCountByUserId(Long userId);
+
+    Page<GetUserDto> getUserByIds(List<Long> ids, Pageable pageable);
+
+    GetUserDto getUserByEmail(String email);
 }

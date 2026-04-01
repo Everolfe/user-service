@@ -3,6 +3,7 @@ package com.github.everolfe.userservice.controller;
 
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
+import com.github.everolfe.userservice.service.UserService;
 import com.github.everolfe.userservice.service.impl.UserServiceImpl;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
-    private final UserServiceImpl userServiceImpl;
+    private final UserService userServiceImpl;
 
     /**
      * Internal endpoint for user registration.
@@ -203,5 +204,19 @@ public class UserController {
     public ResponseEntity<Integer> getCardCountByUserId(@PathVariable Long userId) {
         int count = userServiceImpl.getCardCountByUserId(userId);
         return new ResponseEntity<>(count, HttpStatus.OK);
+    }
+
+    @GetMapping("/by-ids")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isOwner(#id)")
+    public ResponseEntity<Page<GetUserDto>> getUsersByIds(@RequestBody List<Long> ids, Pageable pageable) {
+        Page<GetUserDto> users = userServiceImpl.getUserByIds(ids, pageable);
+        return new ResponseEntity<>(users, HttpStatus.OK);
+    }
+
+    @GetMapping("/email")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isEmailOwner(#email)")
+    public ResponseEntity<GetUserDto> getUserByEmail(@RequestParam String email) {
+        GetUserDto user = userServiceImpl.getUserByEmail(email);
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }

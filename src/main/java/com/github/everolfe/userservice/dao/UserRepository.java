@@ -50,6 +50,11 @@ public interface UserRepository extends JpaRepository<User, Long>,
     @Query("SELECT u.email FROM User u WHERE u.email IN :emails")
     List<String> findExistingEmails(@Param("emails") Set<String> emails);
 
+    Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.id IN :ids")
+    Page<User> findAllById(Iterable<Long> ids, Pageable pageable);
+
     Optional<User> findBySub(UUID sub);
 
     boolean existsBySub(UUID sub);
