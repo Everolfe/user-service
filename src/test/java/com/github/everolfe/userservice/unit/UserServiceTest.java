@@ -352,11 +352,15 @@ class UserServiceTest {
         expectedDto.setName(newName);
         expectedDto.setSurname(newSurname);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById(userId))
+                .thenReturn(Optional.of(existingUser))
+                .thenReturn(Optional.of(updatedUser));
+
         when(userRepository.existsByEmail(newEmail)).thenReturn(false);
         when(createUserMapper.toEntity(updateDto)).thenReturn(updatedUser);
-        when(userRepository.updateUserDynamic(updatedUser)).thenReturn(1);
+        when(userRepository.updateUserDynamic(any(User.class))).thenReturn(1);
         when(getUserMapper.toDto(updatedUser)).thenReturn(expectedDto);
+
         GetUserDto result = userServiceImpl.updateUser(userId, updateDto);
 
         assertAll(
@@ -370,10 +374,9 @@ class UserServiceTest {
         verify(userRepository, times(1)).findById(userId);
         verify(userRepository, times(1)).existsByEmail(newEmail);
         verify(createUserMapper, times(1)).toEntity(updateDto);
-        verify(userRepository, times(1)).updateUserDynamic(updatedUser);
+        verify(userRepository, times(1)).updateUserDynamic(any(User.class));
         verify(getUserMapper, times(1)).toDto(updatedUser);
     }
-
     @Test
     @WithMockUser(roles = "ADMIN")
     void testUpdateUserWithIncorrectId() {
@@ -647,5 +650,61 @@ class UserServiceTest {
         verify(userRepository, times(1)).findExistingEmails(Set.of());
         verify(userRepository, times(1)).saveAll(List.of());
         verify(getUserMapper, times(1)).toDtos(List.of());
+    }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByEmail_success()
+    {
+        User user = new User();
+        user.setEmail("user@test.com");
+
+        GetUserDto userDto = new GetUserDto();
+        userDto.setEmail("user@test.com");
+
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
+        when(getUserMapper.toDto(any())).thenReturn(userDto);
+
+        userServiceImpl.getUserByEmail("user@test.com");
+
+        assertEquals("user@test.com", userDto.getEmail());
+
+        verify(userRepository, times(1)).findByEmail(anyString());
+        verify(getUserMapper, times(1)).toDto(any());
+    }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByEmail_withInvalidEmail_throwsException() {
+        assertThrows(RuntimeException.class, () -> userServiceImpl.getUserByEmail("user@test.com"));
+    }
+
+    @Test
+    @WithMockUser("ADMIN")
+    void getUserByIds_success(){
+        List<Long> ids = List.of(1L, 2L, 3L);
+        User user1 = new User();
+        user1.setId(1L);
+        User user2 = new User();
+        user2.setId(2L);
+
+        List<User> userPage = List.of(user1, user2);
+        GetUserDto dto1 = new GetUserDto();
+        dto1.setId(1L);
+        GetUserDto dto2 = new GetUserDto();
+        dto2.setId(2L);
+
+        List<GetUserDto> dtos = List.of(dto1, dto2);
+        when(userRepository.findAllById(ids)).thenReturn(userPage);
+        when(getUserMapper.toDtos(userPage)).thenReturn(dtos);
+        List<GetUserDto> result = userServiceImpl.getUserByIds(ids);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+
+        verify(userRepository, times(1)).findAllById(ids);
+        verify(getUserMapper, times(1)).toDtos(userPage);
+
     }
 }

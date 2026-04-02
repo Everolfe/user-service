@@ -25,6 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long>,
             "u.surname = COALESCE(:#{#user.surname}, u.surname), " +
             "u.birthDate = COALESCE(:#{#user.birthDate}, u.birthDate), " +
             "u.email = COALESCE(:#{#user.email}, u.email), " +
+            "u.active = COALESCE(:#{#user.active}, u.active), " +
             "u.updatedAt = CURRENT_TIMESTAMP " +
             "WHERE u.id = :#{#user.id}")
     int updateUserDynamic(@Param("user") User user);
@@ -49,6 +50,11 @@ public interface UserRepository extends JpaRepository<User, Long>,
 
     @Query("SELECT u.email FROM User u WHERE u.email IN :emails")
     List<String> findExistingEmails(@Param("emails") Set<String> emails);
+
+    Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.id IN :ids")
+    List<User> findAllById(Iterable<Long> ids);
 
     Optional<User> findBySub(UUID sub);
 

@@ -3,7 +3,7 @@ package com.github.everolfe.userservice.controller;
 
 import com.github.everolfe.userservice.dto.userdto.CreateUserDto;
 import com.github.everolfe.userservice.dto.userdto.GetUserDto;
-import com.github.everolfe.userservice.service.impl.UserServiceImpl;
+import com.github.everolfe.userservice.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
-    private final UserServiceImpl userServiceImpl;
+    private final UserService userServiceImpl;
 
     /**
      * Internal endpoint for user registration.
@@ -203,5 +203,33 @@ public class UserController {
     public ResponseEntity<Integer> getCardCountByUserId(@PathVariable Long userId) {
         int count = userServiceImpl.getCardCountByUserId(userId);
         return new ResponseEntity<>(count, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves multiple users by their IDs in a single batch request.
+     * This endpoint is more efficient than making individual requests for each user ID.
+     *
+     * @param ids the list of user IDs to retrieve (must not be null)
+     * @return ResponseEntity containing the list of GetUserDto objects for the requested IDs
+     *         (non-existent IDs are simply omitted from the response)
+     */
+    @PostMapping("/batch/id")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<GetUserDto>> getUsersByIds(@RequestBody List<Long> ids) {
+        List<GetUserDto> users = userServiceImpl.getUserByIds(ids);
+        return new ResponseEntity<>(users, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves a user by their email address.
+     *
+     * @param email the email address of the user to retrieve (must not be null or empty)
+     * @return ResponseEntity containing the GetUserDto of the found user
+     */
+    @GetMapping("/email")
+    @PreAuthorize("hasRole('ADMIN') or @securityHelper.isEmailOwner(#email)")
+    public ResponseEntity<GetUserDto> getUserByEmail(@RequestParam String email) {
+        GetUserDto user = userServiceImpl.getUserByEmail(email);
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }
