@@ -205,10 +205,10 @@ public class UserController {
         return new ResponseEntity<>(count, HttpStatus.OK);
     }
 
-    @GetMapping("/by-ids")
+    @PostMapping("/batch/id")
     @PreAuthorize("hasRole('ADMIN') or @securityHelper.isOwner(#id)")
-    public ResponseEntity<Page<GetUserDto>> getUsersByIds(@RequestBody List<Long> ids, Pageable pageable) {
-        Page<GetUserDto> users = userServiceImpl.getUserByIds(ids, pageable);
+    public ResponseEntity<List<GetUserDto>> getUsersByIds(@RequestBody List<Long> ids) {
+        List<GetUserDto> users = userServiceImpl.getUserByIds(ids);
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
@@ -218,4 +218,6 @@ public class UserController {
         GetUserDto user = userServiceImpl.getUserByEmail(email);
         return new ResponseEntity<>(user, HttpStatus.OK);
     }
+
+
 }

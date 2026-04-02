@@ -213,9 +213,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<GetUserDto> getUserByIds(List<Long> ids, Pageable pageable) {
-        Page<User> existingUsers = userRepository.findAllById(ids, pageable);
-        return existingUsers.map(getUserMapper::toDto);
+    public List<GetUserDto> getUserByIds(List<Long> ids) {
+        List<User> existingUsers = userRepository.findAllById(ids);
+        return getUserMapper.toDtos(existingUsers);
     }
 
     @Override

@@ -689,25 +689,23 @@ class UserServiceTest {
         User user2 = new User();
         user2.setId(2L);
 
-        Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, 2);
+        List<User> userPage = List.of(user1, user2);
         GetUserDto dto1 = new GetUserDto();
         dto1.setId(1L);
         GetUserDto dto2 = new GetUserDto();
         dto2.setId(2L);
 
-        when(userRepository.findAllById(ids, pageable)).thenReturn(userPage);
-        when(getUserMapper.toDto(user1)).thenReturn(dto1);
-        when(getUserMapper.toDto(user2)).thenReturn(dto2);
-        Page<GetUserDto> result = userServiceImpl.getUserByIds(ids, pageable);
+        List<GetUserDto> dtos = List.of(dto1, dto2);
+        when(userRepository.findAllById(ids)).thenReturn(userPage);
+        when(getUserMapper.toDtos(userPage)).thenReturn(dtos);
+        List<GetUserDto> result = userServiceImpl.getUserByIds(ids);
 
         assertNotNull(result);
-        assertEquals(2, result.getContent().size());
-        assertEquals(1L, result.getContent().get(0).getId());
-        assertEquals(2L, result.getContent().get(1).getId());
+        assertEquals(2, result.size());
 
-        verify(userRepository, times(1)).findAllById(ids, pageable);
-        verify(getUserMapper, times(1)).toDto(user1);
-        verify(getUserMapper, times(1)).toDto(user2);
+
+        verify(userRepository, times(1)).findAllById(ids);
+        verify(getUserMapper, times(1)).toDtos(userPage);
 
     }
 }

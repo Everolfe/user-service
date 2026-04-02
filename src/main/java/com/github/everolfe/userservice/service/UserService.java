@@ -124,7 +124,7 @@ public interface UserService {
      */
     int getCardCountByUserId(Long userId);
 
-    Page<GetUserDto> getUserByIds(List<Long> ids, Pageable pageable);
+    List<GetUserDto> getUserByIds(List<Long> ids);
 
     GetUserDto getUserByEmail(String email);
 }

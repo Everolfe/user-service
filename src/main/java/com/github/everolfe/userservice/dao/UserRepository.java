@@ -54,7 +54,7 @@ public interface UserRepository extends JpaRepository<User, Long>,
     Optional<User> findByEmail(String email);
 
     @Query("SELECT u FROM User u WHERE u.id IN :ids")
-    Page<User> findAllById(Iterable<Long> ids, Pageable pageable);
+    List<User> findAllById(Iterable<Long> ids);
 
     Optional<User> findBySub(UUID sub);
 
