@@ -682,7 +682,6 @@ class UserServiceTest {
     @Test
     @WithMockUser("ADMIN")
     void getUserByIds_success(){
-        Pageable pageable = Pageable.unpaged();
         List<Long> ids = List.of(1L, 2L, 3L);
         User user1 = new User();
         user1.setId(1L);

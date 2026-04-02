@@ -124,7 +124,26 @@ public interface UserService {
      */
     int getCardCountByUserId(Long userId);
 
+    /**
+     * Retrieves multiple users by their IDs in a single batch operation.
+     * This method is more efficient than calling getUserById() multiple times
+     * as it reduces database round trips.
+     *
+     * @param ids the list of user IDs to retrieve (must not be null)
+     * @return a list of GetUserDto objects for the found users.
+     *         If an ID doesn't exist or belongs to a deactivated user, it is silently omitted.
+     *         The order of the returned list may not match the order of input IDs.
+     * @throws IllegalArgumentException if ids is null
+     */
     List<GetUserDto> getUserByIds(List<Long> ids);
 
+    /**
+     * Retrieves a user by their email address.
+     *
+     * @param email the email address of the user to retrieve (must not be null or empty)
+     * @return the DTO of the user
+     * @throws ResourceNotFoundException if no active user with the provided email address exists
+     * @throws IllegalArgumentException if email is null or blank
+     */
     GetUserDto getUserByEmail(String email);
 }
