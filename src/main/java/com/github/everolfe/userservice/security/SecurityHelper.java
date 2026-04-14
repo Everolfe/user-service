@@ -45,6 +45,15 @@ public class SecurityHelper {
         return owner.getSub().equals(subFromToken);
     }
 
+    public boolean isEmailOwner(String email) {
+        UUID subFromToken = getSubFromToken();
+        if (subFromToken == null) return false;
+
+        User owner = userRepository.findByEmail(email).orElse(null);
+        if (owner == null) return false;
+        return owner.getSub() != null && owner.getSub().equals(subFromToken);
+    }
+
     private UUID getSubFromToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication instanceof JwtAuthenticationToken token) {

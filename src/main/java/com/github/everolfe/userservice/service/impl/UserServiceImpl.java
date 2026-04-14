@@ -21,6 +21,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -57,7 +58,7 @@ public class UserServiceImpl implements UserService {
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
             throw new ResourceNotFoundException("User not found with id" + id);
-        } else if (!user.get().getActive()) {
+        } else if (Boolean.FALSE.equals(user.get().getActive())) {
             throw new ResourceNotFoundException("User is deactivated");
         } else {
             return getUserMapper.toDto(user.get());
@@ -77,7 +78,8 @@ public class UserServiceImpl implements UserService {
         Specification<User> spec = UserSpecification
                 .filterByNameAndSurname(name, surname)
                 .and(isActive());
-        return userRepository.findAll(spec, pageable)
+        return userRepository
+                .findAll(spec, pageable)
                 .map(getUserMapper::toDto);
     }
 
@@ -118,7 +120,7 @@ public class UserServiceImpl implements UserService {
     public GetUserDto updateUser(Long id, CreateUserDto createUserDto) {
         User user = userRepository
                 .findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No user with id" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("No user with id: " + id));
 
         if (createUserDto.getEmail() != null &&
                 !createUserDto.getEmail().equals(user.getEmail()) &&
@@ -130,24 +132,27 @@ public class UserServiceImpl implements UserService {
         boolean isDeactivating = Boolean.TRUE.equals(user.getActive()) &&
                 Boolean.FALSE.equals(createUserDto.getActive());
 
-        User updatedUser = createUserMapper.toEntity(createUserDto);
-        updatedUser.setId(id);
+        User userToUpdate = createUserMapper.toEntity(createUserDto);
+        userToUpdate.setId(id);
 
-        int updatedCount = userRepository.updateUserDynamic(updatedUser);
+        int updatedCount = userRepository.updateUserDynamic(userToUpdate);
         if (updatedCount == 0) {
-            throw new ResourceNotFoundException("Failed to update user with id" + id);
+            throw new ResourceNotFoundException("Failed to update user with id: " + id);
         }
 
         if (isDeactivating) {
             deactivateUserCards(id);
         }
 
-        return getUserMapper.toDto(updatedUser);
+        return getUserMapper.toDto(userToUpdate);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "users", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "users", key = "#id"),
+            @CacheEvict(value = "cards", allEntries = true)
+    })
     public void deleteUser(Long id) {
         User user = userRepository
                 .findById(id)
@@ -205,6 +210,24 @@ public class UserServiceImpl implements UserService {
         }
         return userRepository.getCardCountByUserId(userId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GetUserDto> getUserByIds(List<Long> ids) {
+        List<User> existingUsers = userRepository.findAllById(ids);
+        return getUserMapper.toDtos(existingUsers);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GetUserDto getUserByEmail(String email) {
+        User user = userRepository
+                .findByEmail(email)
+                .filter(u -> u.getActive() == Boolean.TRUE)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return getUserMapper.toDto(user);
+    }
+
 
     private void deactivateUserCards(Long userId) {
         paymentCardRepository.deactivateAllCardsByUserId(userId);
